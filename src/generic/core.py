@@ -23,14 +23,23 @@ Example
 
 
 '''
-__all__ = ['Generic', 'generic', 'overload']
-
 import sys
 from generic.tree import PosetMap
 from collections import MutableMapping
 
+__all__ = ['Generic', 'generic', 'overload']
 
-class Generic(MutableMapping):
+try:
+    from generic.core_fast import FastCache as _FastCache
+
+    class Base(_FastCache, MutableMapping):
+        pass
+
+except ImportError:
+    Base = MutableMapping
+
+
+class Generic(Base):
 
     '''A generic function is a collection of different implementations or
     "methods" under the same name, usually sharing a similar interface. When
@@ -48,6 +57,7 @@ class Generic(MutableMapping):
     '''
 
     def __init__(self, name, doc=None):
+        super(Generic, self).__init__()
         self.name = name
         self.doc = doc
         self._cache = {}
@@ -72,7 +82,7 @@ class Generic(MutableMapping):
     def __repr__(self):
         name = self.name
         size = len(self)
-        return '<generic function %(name)() with %(size)s methods>' % locals()
+        return '<generic function %(name)s() with %(size)s methods>' % locals()
 
     def __get__(self, instance, cls=None):
         '''Implements the descriptor interface in order to work as method'''
@@ -234,6 +244,11 @@ class Generic(MutableMapping):
 
         return method
 
+    def _cache_update(self):
+        '''Call whenever cache is changed'''
+
+        pass
+
     # Dictionary interface ####################################################
     def __contains__(self, obj):
         try:
@@ -280,6 +295,7 @@ class Generic(MutableMapping):
             if subclasses(k, argtypes):
                 if not any(subclasses(k, K) for K in subkeys):
                     del self._cache[k]
+        self._cache_update()
 
         # Update documentation, if empty
         if not self.__doc__:
@@ -297,6 +313,7 @@ class Generic(MutableMapping):
                 raise KeyError(types)
 
             func = self._cache[types] = self._unwrap_method(method, types)
+            self._cache_update()
             return func
 
     def __delitem__(self, types):
@@ -313,7 +330,8 @@ class Generic(MutableMapping):
 
     def __iter__(self):
         if None in self._cache:
-            return iter(self._data)
+            for key in self._data:
+                yield key
         else:
             # None is the root fallback method. If no method is assigned to
             # None, it should not be in the list of keys
@@ -322,9 +340,21 @@ class Generic(MutableMapping):
                     yield key
 
 
+#
+# Uses the fast version of the __call__ method if available from C class
+#
+try:
+    if 'FastCache' in [cls.__name__ for cls in Generic.mro()]:
+        del Generic.__call__
+        del Generic._cache_update
+except AttributeError:
+    pass
+
 ###############################################################################
 #                            Utility functions
 ###############################################################################
+
+
 def subclasses(types1, types2):
     '''Return True if all types in the sequence types1 are subclasses of the
     respective types in the sequence types2.

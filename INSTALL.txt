@@ -1,0 +1,29 @@
+Dependencies
+============
+
+`pygeneric` can run in many Python implementations including CPython and 
+PyPy. In CPython it can be installed as a (slow) pure-python version or it
+can use compiled extensions to speed-up things in C. This is done using Cython 
+and it is highly recommended that a C compiler and Python development headers 
+are installed prior to building the `pygeneric` library. The speed-ups can 
+be dramatic.
+
+
+Installation commands
+=====================
+
+If you downloaded the pygeneric compressed package, simply unpack it and 
+execute the regular Python install::
+
+    $ python setup.py build
+    $ sudo python setup.py install
+
+`pygeneric` is also available at PyPI and hence can be installed using `pip`::
+
+    $ sudo pip install pygeneric
+    
+In Windows the command would be something like this (adapt for the correct 
+Python installation path)::
+
+    $ cd c:\python34
+    $ python -m pip install pygeneric

@@ -1,10 +1,6 @@
 '''
-Some helper data structures that are used to resolve methods from function
-signatures.
-
-Created on 11/06/2015
-
-@author: Fábio Macêdo Mendes
+Three and OrderedTree data structures that are used to resolve methods from
+function signatures.
 '''
 
 import collections
@@ -89,7 +85,8 @@ class Tree(object):
         if not ommit_self:
             yield prefix + (), self
         for i, x in enumerate(self.tail):
-            yield from x.walkitems(prefix=prefix + (i,))
+            for item in x.walkitems(prefix=prefix + (i,)):
+                yield item
 
 
 class OrderedTree(Tree):
@@ -115,9 +112,9 @@ class OrderedTree(Tree):
     These methods automatically put the objects in their correct positions in
     the tree graph. We may inspect using the pretty-printer
 
-    >>> print(tree.pprint())
+    >>> print(tree.pprint())                              # doctest: + ELLIPSIS
     <OrderedTree (<class 'object'>) with 2 sub-trees>
-        [0]: <class 'collections.abc.Mapping'>
+        [0]: <class '...Mapping'>
             [0, 0]: <class 'dict'>
         [1]: <class 'list'>
 
