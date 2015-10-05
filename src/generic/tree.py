@@ -135,7 +135,7 @@ class OrderedTree(Tree):
     '''
 
     def __init__(self, ordering, head, tail=()):
-        super().__init__(head, tail)
+        super(OrderedTree, self).__init__(head, tail)
         self.ordering = ordering
 
     def _assure_higher(self, x):

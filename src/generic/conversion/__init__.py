@@ -31,10 +31,10 @@ conversion for some specific type it may fail for specific values.
     ...
     TypeError: cannot convert 'str' to 'float'
 
-    >>> convert(1.5, int)
+    >>> convert(1.5, int)                   # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
-    generic.errors.InexactError: 1.5
+    InexactError: 1.5
 
 
 The user may specify custom conversions using the :func:`set_conversion`

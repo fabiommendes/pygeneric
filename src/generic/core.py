@@ -10,20 +10,29 @@ Example
 ... def f(x, y):
 ...     return x + y + 3.14
 
+Python 3
 
->>> @overload(f)
+>>> @overload(f)                                               # doctest: +SKIP
 ... def f(x:int, y:int):
 ...     return x + y + 3
+
+
+Python 2 and 3
+
+>>> @f.overload([int, int])
+... def f(x, y):
+...     return x + y + 3
+
 
 >>> f(0, 0)
 3
 >>> f(0.0, 0.0)
 3.14
 
-
-
 '''
 import sys
+import six
+import inspect
 from generic.tree import PosetMap
 from collections import MutableMapping
 
@@ -134,47 +143,54 @@ class Generic(Base):
     def overload(self, *args, **kwds):
         '''Decorator used to register method overloads'''
 
-        # Finds the implementation and signature
-        arg_types = None
-        ret_type = None
+        # Decorator form: function is not the first argument
+        if len(args) == 0 or not callable(args[0]):
+            def decorator(func):
+                self.overload(func, *args, **kwds)
+                if func.__name__ == self.__name__:
+                    return self
+                else:
+                    return func
+            return decorator
+
+        # Non decorator form of method call
+        func, args = args[0], args[1:]
+
+        # No types given: inspect arguments
+        _restype = object
         if len(args) == 0:
-            pass
-        elif len(args) == 1:
-            arg_types = args[0]
-        elif len(args) == 2:
-            arg_types, ret_type = args
-        else:
-            raise TypeError('expect between 0 and 2 positional arguments')
-
-        # Maybe it is a decorator
-        if len(args) == 1 and len(kwds) == 0 and callable(arg_types):
-            return self.overload()(args[0])
-
-        def decorator(func):
-            nonlocal arg_types, ret_type
-
-            # Accept stacked overload decorators
-            if func is self:
-                func = self._last_func
-            self._last_func = func
-
-            # Get signature from function
-            # (currently the return type is simply ignored)
-            if arg_types is None and ret_type is None:
-                arg_types = self._inspect_signature(func)
-
-            # Check if function is has a fallback signature
             if self._is_fallback_signature(func):
-                arg_types = None
-
-            # Save in cache and return
-            self[arg_types] = func
-            if func.__name__ == self.name:
-                return self
+                argtypes = None
+            elif six.PY2:
+                func_args = inspect.getargs(func.func_code).args
+                argtypes = [object] * len(func_args)
             else:
-                return func
+                argtypes, _restype = self._inspect_signature(func)
 
-        return decorator
+        # Input types given
+        if len(args) >= 1:
+            argtypes = tuple(args[0])
+
+        # Input and output types given
+        if len(args) == 2:
+            _restype = args[1]
+
+        if len(args) > 2:
+            raise TypeError('expect between 0 and 3 positional arguments')
+
+        # Accept stacked overload decorators
+        if func is self:
+            func = self._last_func
+        self._last_func = func
+
+        # Save in the internal dictionary
+        self[argtypes] = func
+
+        # Return the correct value.
+        if func.__name__ == self.name:
+            return self
+        else:
+            return func
 
     def which(self, *args, **kwds):
         '''Instead of calling the generic function with the given arguments,
@@ -201,12 +217,12 @@ class Generic(Base):
             D = func.__annotations__
             n_args = func.__code__.co_argcount - len(func.__defaults__ or ())
             varnames = func.__code__.co_varnames[:n_args]
-            return tuple(D.get(name, object) for name in varnames)
+            return tuple(D.get(name, object) for name in varnames), object
 
         # Does not have annotations, maybe it is a builtin function. Try
         # looking at the docstring
         except AttributeError:
-            body, sep1, _tail = func.__doc__.partition(')')
+            body, sep1, _tail = getattr(func, '__doc__', '').partition(')')
             name, sep2, args = body.partition('(')
 
             # Fail conditions
@@ -223,7 +239,7 @@ class Generic(Base):
                     'Try giving the signature explicitly')
 
             varnames = [x.strip() for x in args.split(',')]
-            return tuple(object for name in varnames)
+            return tuple(object for name in varnames), object
 
     def _wrap_method(self, method, argtypes, restype):
         '''Wraps a callable implementation of some given signature. The wrapped
@@ -412,7 +428,7 @@ def generic(func=None, **kwds):
 
     # Finds the approriate base class and return the generic function
     generic = Generic(func.__name__)
-    generic.overload()(func)
+    generic.overload(func)
     return generic
 
 
@@ -431,26 +447,32 @@ def overload(genericfunc, *args, **kwds):
     The overload decorator must be called with the generic function as first
     argument
 
-    >>> @overload(foo)
+    >>> @overload(foo)                                         # doctest: +SKIP
     ... def foo(x:int, y:int):
     ...    return x + y + 1
+
+    One can specify the input types with the alternate syntax bellow, which
+    is also valid in Python 2.
+
+    >>> @overload(foo, [int, int])
+    ... def foo(x, y):
+    ...    return x + y + 1
+
+    This syntax is also helpful when declaring many different input signatures
+    that are associated with the same implementation.
+
+    >>> @overload(foo, [float, int])
+    ... @overload(foo, [int, float])
+    ... def foo(x, y):
+    ...    return x + y + 0.5
 
     Now we dispatch to different implementations depending on the types of the
     arguments
 
     >>> foo(1.0, 1.0)
     2.0
-    >>> foo(1,1)
+    >>> foo(1, 1)
     3
-
-    Optionally, the overload decorator can specify a type signature which can
-    be useful for directing different signatures to the same implementation
-
-    >>> @overload(foo, (float, int))         # no return type here.
-    ... @overload(foo, (int, float), float)  # this has a return type!
-    ... def foo(x, y):
-    ...    return x + y + 0.5
-
     >>> foo(1, 1.0), foo(1.0, 1)
     (2.5, 2.5)
     '''
@@ -460,7 +482,7 @@ def overload(genericfunc, *args, **kwds):
                         'decorator first')
 
     def decorator(func):
-        return genericfunc.overload(*args, **kwds)(func)
+        return genericfunc.overload(func, *args, **kwds)
     return decorator
 
 
@@ -476,8 +498,8 @@ if __name__ == '__main__':
     def f(x, y):
         return x + y + 3.14
 
-    @overload(f)
-    def f(x: int, y: int):
+    @overload(f, [int, int])
+    def f(x, y):
         return x + y + 3
 
     assert f(0, 0) == 3
