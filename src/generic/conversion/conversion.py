@@ -54,8 +54,11 @@ def get_conversion(from_type, to_type):
     try:
         return CONVERT_FUNCTIONS[from_type, to_type]
     except KeyError:
-        if issubclass(to_type, from_type):
-            return do_nothing
+        try:
+            if issubclass(to_type, from_type):
+                return do_nothing
+        except TypeError:
+            raise TypeError('not types: %r, %r' % (from_type, to_type))
 
     # Handle key error
     if not (isinstance(from_type, type) and isinstance(to_type, type)):
