@@ -172,9 +172,9 @@ def set_promotion_rule(T1, T2, T3):
 
     # Check trivial promotion
     if T1 is T2 and T2 is T3:
-        def do_nothing(x, y):
+        def _do_nothing(x, y):
             return (x, y)
-        PROMOTION_FUNCTIONS[T1, T2] = PROMOTION_FUNCTIONS[T2, T1] = do_nothing
+        PROMOTION_FUNCTIONS[T1, T2] = PROMOTION_FUNCTIONS[T2, T1] = _do_nothing
         return
 
     # Saves the direct promotion T1, T2 -> T3

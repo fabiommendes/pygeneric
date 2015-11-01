@@ -14,10 +14,12 @@ Some typical usages are:
       (e.g. numpy), but you want to provide a fallback implementation;
     * You want to fiddle with one of the many JITs available for Python. Most
       users won't have all of them installed, so you may use a common
-      interface and maybe also provide a fallback Python implementation;
+      interface so the library can pick up the first JIT that is available 
+      and you may also provide a fallback Python implementation;
     * Maybe the most efficient Python code you have is great for CPython, but
-      sucks for other implementations and vice-versa;
-    * You are optimizing code, but you want to keep some old implementions
+      sucks for other implementations and vice-versa. You can provide different
+      implementations for each Python VM;
+    * You are optimizing code, but you want to keep old implementions
       around in case your new blazing fast ones end up having some corner case
       unsolvable bugs;
     * You want to easily compare different optimizations for the same function,
@@ -48,7 +50,7 @@ And a pure-Python fallback
 ... def sum_of_sum(a, b):
 ...     return sum(x + y for (x, y) in zip(a, b))
 
-Now, if the user has numpy installed, it will use the first implementation,
+If the user has numpy installed, it will use the first implementation,
 otherwise, sum_of_sum() will fallback to the second.
 
 
@@ -58,7 +60,7 @@ import time
 import importlib
 import weakref
 import imp
-import os
+import functools
 
 __all__ = ['try_import', 'timeit', 'numpy', 'fallback']
 
@@ -85,6 +87,7 @@ def which_python():
     if not (set(pythons) - set(['python2', 'python3'])):
         pythons.append('unknown_python')
     return pythons
+
 
 def fix_implementations():
     '''Fix the DEFAULT_FALLBACK constant to prioritize the running
@@ -343,6 +346,7 @@ class TimedMultiFunction(MultiFunction):
         for name, time in L:
             print('    %s: %s sec' % (name, time))
 
+
 #==============================================================================
 # Special decorators
 #==============================================================================
@@ -383,7 +387,7 @@ def haslib(libname, func=None, descr=None):
         compiled > jit-based > numpy > other python libraries > fallback
 
     Since "math" and "exotic_math" falls in the last category, the last
-    implementation which is acceptable has priority. A system that has the
+    acceptable implementation has priority. A system that has the
     "exotic_math" library would use the second implementation. If we define
     another supported implementation it will have priority over "math"::
 
@@ -412,15 +416,18 @@ def haslib(libname, func=None, descr=None):
     else:
         decorator(func)
 
+
 def numpy(func=None, **kwds):
     '''Marks that a function requires the numpy library'''
 
     return haslib('numpy', **kwds)(func)
 
+
 def fallback(func=None, **kwds):
     '''Marks the fallback implementation of a function'''
 
     return haslib('fallback', **kwds)(func)
+
 
 def python2(func=None, **kwds):
     '''Marks a implementation that is only valid in python 2
@@ -429,6 +436,7 @@ def python2(func=None, **kwds):
 
     return haslib('python2', **kwds)(func)
 
+
 def python3(func=None, **kwds):
     '''Marks a implementation that is only valid in python 3
 
@@ -436,36 +444,43 @@ def python3(func=None, **kwds):
 
     return haslib('python2', **kwds)(func)
 
+
 def cpython(func=None, **kwds):
     '''Marks the default fallback for CPython'''
 
     return haslib('cpython', **kwds)(func)
+
 
 def pypy(func=None, **kwds):
     '''Marks the default fallback for PyPy'''
 
     return haslib('pypy', **kwds)(func)
 
+
 def ironpython(func=None, **kwds):
     '''Marks the default fallback for IronPython'''
 
     return haslib('ironpython', **kwds)(func)
+
 
 def jython(func=None, **kwds):
     '''Marks the default fallback for Jython'''
 
     return haslib('jython', **kwds)(func)
 
+
 def asmjs(func=None, **kwds):
     '''Marks the default fallback for the asm.js compilation of CPython'''
 
     return haslib('asmjs', **kwds)(func)
+
 
 def nacl(func=None, **kwds):
     '''Marks the default fallback for CPython compilation in Google's NaCl
     platform '''
 
     return haslib('nacl', **kwds)(func)
+
 
 #==============================================================================
 # Import mechanisms
@@ -507,21 +522,36 @@ def try_import(*args, **kwargs):
         if raises:
             raise ImportError
 
+
 #==============================================================================
 # Timeit operations
 #==============================================================================
-class HasValue(object):
+class Proxy(object):
     '''Holds a simple .value attribute that can be used to store anything'''
 
-    __slots__ = ['value']
+    __slots__ = ('value',)
+
     def __init__(self, value=None):
         self.value = value
 
     def __repr__(self):
         return repr(self.value)
-
+    
     def __str__(self):
         return str(self.value)
+    
+    def __getattr__(self, attr):
+        return getattr(self.value, attr)
+
+def _proxycall(attr, self, *args, **kwds):
+    method = getattr(self.value, attr)
+    return method(*args, **kwds)
+
+for _attr in dir(float):
+    if not hasattr(Proxy, _attr):
+        _method = functools.partial(_proxycall, _attr) 
+        setattr(Proxy, _attr, _method)
+
 
 @contextlib.contextmanager
 def timeit(title=None):
@@ -530,7 +560,7 @@ def timeit(title=None):
     Example
     -------
 
-    >>> with timeit('simple loop') as dt:                      # doctest: +SKIP
+    >>> with timeit('simple loop') as duration:                 # doctest: +SKIP
     ...     S = 0
     ...     for i in range(1000000):
     ...         S += i
@@ -538,19 +568,18 @@ def timeit(title=None):
 
     The execution time is saved in the dt.value attribute:
 
-    >>> dt.value                                               # doctest: +SKIP
+    >>> duration.value                                          # doctest: +SKIP
     0.20119047164916992
 
     '''
 
     gettime = time.time
-    out = HasValue(None)
+    out = Proxy(None)
     t0 = gettime()
     yield out
     delta = gettime() - t0
     out.value = delta
     if title is not None:
-        delta_st = str(delta)
         print('%s: %s sec' % (title, delta))
 
 #==============================================================================

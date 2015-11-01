@@ -6,7 +6,7 @@ from fasttrack import timeit
 N = 200000
 
 
-def force(x, y):
+def func(x, y):
     return x + y
 
 

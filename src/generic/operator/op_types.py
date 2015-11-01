@@ -65,7 +65,7 @@ class GenericArithmetic(object):
 
     def __truediv__(self, other):
         if isinstance(other, type(self)):
-            return self.__div_similar__(other)
+            return self.__truediv_similar__(other)
         else:
             try:
                 return truediv_safe(self, other)

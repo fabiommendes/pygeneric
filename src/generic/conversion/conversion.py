@@ -7,7 +7,7 @@ CONVERT_FUNCTIONS = {}
 __all__ = ['convert', 'get_conversion', 'set_conversion']
 
 
-def do_nothing(x):
+def _do_nothing(x):
     '''A function that does nothing and returns its argument'''
 
     return x
@@ -56,7 +56,7 @@ def get_conversion(from_type, to_type):
     except KeyError:
         try:
             if issubclass(to_type, from_type):
-                return do_nothing
+                return _do_nothing
         except TypeError:
             raise TypeError('not types: %r, %r' % (from_type, to_type))
 
