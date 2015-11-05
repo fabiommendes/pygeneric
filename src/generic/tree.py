@@ -112,7 +112,7 @@ class OrderedTree(Tree):
     These methods automatically put the objects in their correct positions in
     the tree graph. We may inspect using the pretty-printer
 
-    >>> print(tree.pprint())                              # doctest: + ELLIPSIS
+    >>> print(tree.pprint())                              # doctest:  +ELLIPSIS
     <OrderedTree (<class 'object'>) with 2 sub-trees>
         [0]: <class '...Mapping'>
             [0, 0]: <class 'dict'>

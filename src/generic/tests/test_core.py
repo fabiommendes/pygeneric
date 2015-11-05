@@ -124,7 +124,10 @@ def test_factory(addfunc):
         def func(x, y, z):
             return x + y + z + delta
         return func
-
+    
+    assert (int, int) in addfunc
+    assert (int, int, object) in addfunc
+    assert (int, int, object, object) not in addfunc
     assert addfunc(1, 2, 3) == 6
     assert addfunc(1, 2, 3.0) == 6.5
     

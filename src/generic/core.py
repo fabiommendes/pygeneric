@@ -36,6 +36,7 @@ import inspect
 import functools
 from generic.tree import PosetMap
 from collections import MutableMapping, Mapping
+from .util import raise_no_methods
 
 __all__ = ['Generic', 'generic', 'overload']
 
@@ -66,7 +67,7 @@ class Generic(*_generic_bases):
 
     '''
 
-    def __init__(self, name, doc=None):
+    def __init__(self, name, doc=None, validate=False):
         super(Generic, self).__init__()
         self.name = name
         self.doc = doc
@@ -74,6 +75,7 @@ class Generic(*_generic_bases):
         self._data = PosetMap(subclasses, {None: None})
         self._factories = {}
         self._last_func = None
+        self._validate = validate or None
 
     def __call__(self, *args, **kwds):
         types = tuple(map(type, args))
@@ -156,13 +158,8 @@ class Generic(*_generic_bases):
                 restype = None
             argtypes = tuple(argtypes)
 
-        # Register factory
-        wrapped = functools.partial(_simple_factory, func) 
-        self.factory(*argtypes, factory=wrapped, restype=restype)
-        
-        # Update documentation, if empty
-        if not self.__doc__:
-            self.__doc__ = getattr(func, '__doc__', '')            
+        self.register(*argtypes, func=func, restype=restype)
+
         
     def __getitem__(self, types):
         try:
@@ -226,7 +223,7 @@ class Generic(*_generic_bases):
         # The None root is always present. It is assigned to None if no
         # fallback function is available
         if wrapped is None:
-            raise TypeError(types)
+            raise_no_methods(self, types=types)
 
         factory, restype = wrapped
         implementation = factory(types, restype)
@@ -245,7 +242,7 @@ class Generic(*_generic_bases):
         except KeyError:
             raise TypeError('no methods for %s' % types)
     
-    def register(self, *types, func=None, restype=None):
+    def register(self, *argtypes, func=None, restype=None):
         '''Register a new implementation for the given sequence of input
         types.
         '''
@@ -253,12 +250,17 @@ class Generic(*_generic_bases):
         # We don't use the restype for now. Maybe in the future? Ideas?
         if func is None:
             def decorator(func):
-                self.register(*types, func=func)
+                self.register(*argtypes, func=func)
                 return _generic_or_func(self, func)
             return decorator
         
-        # Save in the internal dictionary
-        self[types] = func
+        # Register factory in the internal dictionary
+        wrapped = functools.partial(_simple_factory, func) 
+        self.factory(*argtypes, func=wrapped, restype=restype)
+        
+        # Update documentation, if empty
+        if not self.__doc__:
+            self.__doc__ = getattr(func, '__doc__', '')
 
     def overload(self, *args, **kwds):
         '''Decorator used to register method overloads'''
@@ -309,7 +311,7 @@ class Generic(*_generic_bases):
         else:
             return func
 
-    def factory(self, *types, factory=None, restype=None):
+    def factory(self, *argtypes, func=None, restype=None):
         '''Register a method factory.
         
         Everytime that the dispatcher reaches a method factory, it calls
@@ -319,37 +321,39 @@ class Generic(*_generic_bases):
         '''
         
         # Call function in decorator form
-        if factory is None:
-            def decorator(factory):
-                self.factory(*types, factory=factory, restype=restype)
-                return factory
+        if func is None:
+            def decorator(func):
+                self.factory(*argtypes, func=func, restype=restype)
+                return func
             return decorator
         
         # Check for invalid inputs
-        if types is not None:
-            if not all(isinstance(T, type) for T in types):
-                types = str(types)
-                raise ValueError('must be a tuple of types, got %s' % types)
+        if argtypes is not None:
+            if not all(isinstance(T, type) for T in argtypes):
+                argtypes = str(argtypes)
+                raise ValueError('must be a tuple of types, got %s' % argtypes)
         if not isinstance(restype, (type, type(None))):
             tname = type(restype).__name__
             raise ValueError('return type must be a type, got %s' % tname)
 
         # Prevent overwriting old values
-        if types in self._data:
-            types_repr = ', '.join(T.__name__ for T in types)
+        if argtypes in self._data:
+            types_repr = ', '.join(T.__name__ for T in argtypes)
             name = self.name
             msg = 'method %s(%s) is already defined' % (name, types_repr)
             raise TypeError(msg)
 
         # Add keys and update cache
-        self._data[types] = (factory, restype)
-        subkeys = list(self._data.subkeys(types))
+        if self._validate is not None:
+            self._validate(argtypes, restype)
+        
+        self._data[argtypes] = (func, restype)
+        subkeys = list(self._data.subkeys(argtypes))
         for k in list(self._cache):
-            if subclasses(k, types):
+            if subclasses(k, argtypes):
                 if not any(subclasses(k, K) for K in subkeys):
                     del self._cache[k]
         self._cache_update()
-
 
     #
     # Helper functions. Can be overloaded by sub-classes

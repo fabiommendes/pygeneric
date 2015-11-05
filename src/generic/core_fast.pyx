@@ -53,7 +53,7 @@ cdef class FastCache(object):
             # Get value from cache dictionary
             item = PyDict_GetItem(<PyObject*> self.__cache, types)
             if item == NULL:
-                self.__last_function = self[<object> types]
+                self.__last_function = self.dispatch(*(<object> types))
             else:
                 self.__last_function = <object> item
 

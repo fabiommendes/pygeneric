@@ -759,9 +759,11 @@ static char __pyx_k_main[] = "__main__";
 static char __pyx_k_test[] = "__test__";
 static char __pyx_k_range[] = "range";
 static char __pyx_k_update[] = "update";
+static char __pyx_k_dispatch[] = "dispatch";
 static char __pyx_k_pyx_vtable[] = "__pyx_vtable__";
 static char __pyx_k_cache_update[] = "_cache_update";
 static PyObject *__pyx_n_s_cache_update;
+static PyObject *__pyx_n_s_dispatch;
 static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_pyx_vtable;
 static PyObject *__pyx_n_s_range;
@@ -901,6 +903,7 @@ static PyObject *__pyx_pf_7generic_9core_fast_9FastCache_2__call__(struct __pyx_
   int __pyx_t_3;
   PyObject *__pyx_t_4 = NULL;
   PyObject *__pyx_t_5 = NULL;
+  PyObject *__pyx_t_6 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -1092,7 +1095,7 @@ static PyObject *__pyx_pf_7generic_9core_fast_9FastCache_2__call__(struct __pyx_
  *             # Get value from cache dictionary
  *             item = PyDict_GetItem(<PyObject*> self.__cache, types)             # <<<<<<<<<<<<<<
  *             if item == NULL:
- *                 self.__last_function = self[<object> types]
+ *                 self.__last_function = self.dispatch(*(<object> types))
  */
     __pyx_v_item = PyDict_GetItem(((PyObject *)__pyx_v_self->__pyx___cache), __pyx_v_types);
 
@@ -1100,7 +1103,7 @@ static PyObject *__pyx_pf_7generic_9core_fast_9FastCache_2__call__(struct __pyx_
  *             # Get value from cache dictionary
  *             item = PyDict_GetItem(<PyObject*> self.__cache, types)
  *             if item == NULL:             # <<<<<<<<<<<<<<
- *                 self.__last_function = self[<object> types]
+ *                 self.__last_function = self.dispatch(*(<object> types))
  *             else:
  */
     __pyx_t_1 = ((__pyx_v_item == NULL) != 0);
@@ -1109,43 +1112,49 @@ static PyObject *__pyx_pf_7generic_9core_fast_9FastCache_2__call__(struct __pyx_
       /* "generic/core_fast.pyx":56
  *             item = PyDict_GetItem(<PyObject*> self.__cache, types)
  *             if item == NULL:
- *                 self.__last_function = self[<object> types]             # <<<<<<<<<<<<<<
+ *                 self.__last_function = self.dispatch(*(<object> types))             # <<<<<<<<<<<<<<
  *             else:
  *                 self.__last_function = <object> item
  */
-      __pyx_t_4 = PyObject_GetItem(((PyObject *)__pyx_v_self), ((PyObject *)__pyx_v_types)); if (unlikely(__pyx_t_4 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_dispatch); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_4);
-      __Pyx_GIVEREF(__pyx_t_4);
+      __pyx_t_5 = PySequence_Tuple(((PyObject *)__pyx_v_types)); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_GOTREF(__pyx_t_5);
+      __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_5, NULL); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_GOTREF(__pyx_t_6);
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+      __Pyx_GIVEREF(__pyx_t_6);
       __Pyx_GOTREF(__pyx_v_self->__pyx___last_function);
       __Pyx_DECREF(__pyx_v_self->__pyx___last_function);
-      __pyx_v_self->__pyx___last_function = __pyx_t_4;
-      __pyx_t_4 = 0;
+      __pyx_v_self->__pyx___last_function = __pyx_t_6;
+      __pyx_t_6 = 0;
 
       /* "generic/core_fast.pyx":55
  *             # Get value from cache dictionary
  *             item = PyDict_GetItem(<PyObject*> self.__cache, types)
  *             if item == NULL:             # <<<<<<<<<<<<<<
- *                 self.__last_function = self[<object> types]
+ *                 self.__last_function = self.dispatch(*(<object> types))
  *             else:
  */
       goto __pyx_L10;
     }
 
     /* "generic/core_fast.pyx":58
- *                 self.__last_function = self[<object> types]
+ *                 self.__last_function = self.dispatch(*(<object> types))
  *             else:
  *                 self.__last_function = <object> item             # <<<<<<<<<<<<<<
  * 
  *             # Save cache for next execution
  */
     /*else*/ {
-      __pyx_t_4 = ((PyObject *)__pyx_v_item);
-      __Pyx_INCREF(__pyx_t_4);
-      __Pyx_GIVEREF(__pyx_t_4);
+      __pyx_t_6 = ((PyObject *)__pyx_v_item);
+      __Pyx_INCREF(__pyx_t_6);
+      __Pyx_GIVEREF(__pyx_t_6);
       __Pyx_GOTREF(__pyx_v_self->__pyx___last_function);
       __Pyx_DECREF(__pyx_v_self->__pyx___last_function);
-      __pyx_v_self->__pyx___last_function = __pyx_t_4;
-      __pyx_t_4 = 0;
+      __pyx_v_self->__pyx___last_function = __pyx_t_6;
+      __pyx_t_6 = 0;
     }
     __pyx_L10:;
 
@@ -1205,11 +1214,11 @@ static PyObject *__pyx_pf_7generic_9core_fast_9FastCache_2__call__(struct __pyx_
  *     property _cache:
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = __pyx_v_self->__pyx___last_function;
-  __Pyx_INCREF(__pyx_t_4);
-  __pyx_t_5 = PyObject_Call(__pyx_t_4, __pyx_v_args, __pyx_v_kwargs); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 67; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_6 = __pyx_v_self->__pyx___last_function;
+  __Pyx_INCREF(__pyx_t_6);
+  __pyx_t_5 = PyObject_Call(__pyx_t_6, __pyx_v_args, __pyx_v_kwargs); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 67; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_5);
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_r = __pyx_t_5;
   __pyx_t_5 = 0;
   goto __pyx_L0;
@@ -1226,6 +1235,7 @@ static PyObject *__pyx_pf_7generic_9core_fast_9FastCache_2__call__(struct __pyx_
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5);
+  __Pyx_XDECREF(__pyx_t_6);
   __Pyx_AddTraceback("generic.core_fast.FastCache.__call__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -1771,6 +1781,7 @@ static struct PyModuleDef __pyx_moduledef = {
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_cache_update, __pyx_k_cache_update, sizeof(__pyx_k_cache_update), 0, 0, 1, 1},
+  {&__pyx_n_s_dispatch, __pyx_k_dispatch, sizeof(__pyx_k_dispatch), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
   {&__pyx_n_s_pyx_vtable, __pyx_k_pyx_vtable, sizeof(__pyx_k_pyx_vtable), 0, 0, 1, 1},
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},

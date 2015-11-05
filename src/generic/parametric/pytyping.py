@@ -1258,13 +1258,18 @@ class _Protocol(metaclass=_ProtocolMeta):
 Hashable = collections_abc.Hashable  # Not generic.
 
 
-class Sequentiable(Generic[T_co], extra=collections_abc.Sequentiable):
-    __slots__ = ()
-
-
+#FIXME: no Sequentiable in collections?
+try:
+    class Sequentiable(Generic[T_co], extra=collections_abc.Sequentiable):
+        __slots__ = ()
+        
+except AttributeError:
+    class Sequentiable(Generic[T_co], extra=collections_abc.Iterable):
+        __slots__ = ()
+        
 class Iterator(Sequentiable[T_co], extra=collections_abc.Iterator):
     __slots__ = ()
-
+    
 
 class SupportsInt(_Protocol):
     __slots__ = ()
