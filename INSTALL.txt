@@ -2,11 +2,8 @@ Dependencies
 ============
 
 `pygeneric` can run in many Python implementations including CPython and 
-PyPy. In CPython it can be installed as a (slow) pure-python version or it
-can use compiled extensions to speed-up things in C. This is done using Cython 
-and it is highly recommended that a C compiler and Python development headers 
-are installed prior to building the `pygeneric` library. The speed-ups can 
-be dramatic.
+PyPy. In CPython it can be installed as a (slower) pure-python version or it
+can use a Cython compiled extensions to speed-up things in C. 
 
 
 Installation commands

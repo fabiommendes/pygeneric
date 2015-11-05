@@ -359,7 +359,6 @@ class Generic(_generic_base):
             if subtypecheck(k, argtypes):
                 if not any(subtypecheck(k, K) for K in subkeys):
                     del self._cache[k]
-        self._cache_update()
 
     #
     # Helper functions. Can be overloaded by sub-classes
@@ -382,7 +381,6 @@ class Generic(_generic_base):
 try:
     if 'FastCache' in [cls.__name__ for cls in Generic.mro()]:
         del Generic.__call__
-        del Generic._cache_update
 except AttributeError:
     pass
 
@@ -431,9 +429,10 @@ def dispatch(T, D):
     for _ in range(len(parents)):
         if len(parents) <= 1:
             break
-        X, *tail = parents
-        parents = [S for S in tail if not subclass(X, S)]
-        parents.append(X)
+        else:
+            X, *tail = parents
+            parents = [S for S in tail if not subclass(X, S)]
+            parents.append(X)
 
     if parents:
         return D[parents[0]]
@@ -476,7 +475,7 @@ def inspect_signature(func):
     try:
         if six.PY2:
             func_args = inspect.getargs(func.func_code).args
-            return tuple([object] * len(func_args))
+            return tuple([object] * len(func_args)), object
 
         else:
             D = func.__annotations__

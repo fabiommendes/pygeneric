@@ -1,6 +1,5 @@
 import pytest
-from generic import generic
-from generic.operator import * 
+from generic.op import * 
 
 #
 # Fixtures
@@ -21,12 +20,12 @@ def T():
             print(self, other)
             return self.data == other.data
         
-    @add.overload
-    def add1(x: int, y: T):
+    @add.register(int, T)
+    def add1(x, y):
         return T(x + y.data) 
     
-    @add.overload
-    def add2(y: T, x: int):
+    @add.register(T, int)
+    def add2(y, x):
         return T(x + y.data)
     
     return T

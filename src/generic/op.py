@@ -2,10 +2,20 @@
 Base types for objects that delegate implementations of operations and 
 relations to generic functions.
 '''
-from __future__ import absolute_import # Avoid conflict with operator module in Py2
 import operator
 from . import generic
 from .util import raise_no_methods, get_no_methods_error, raise_unordered
+
+
+__all__ = [
+    'Object', 
+    
+    # Arithmetic
+    'add', 'sub', 'mul', 'truediv', 'div', 'floordiv',
+
+    # Relations
+    'eq', 'ne', 'gt', 'lt', 'ge', 'le',
+]
 
 
 class Object(object):
@@ -112,7 +122,6 @@ def _opsame_meta_factory(opname):
     samemethod = '__%ssame__' % opname
 
     def factory(argtypes, restype):
-        print(argtypes)
         T1, T2 = argtypes
         if T1 is T2:
             try:
@@ -154,8 +163,7 @@ def _arithmetic_op_factory(opname):
         except AttributeError:
             raise_no_methods(op, args=(x, y))
     
-    
-    op.factory(Object, Object, func=_opsame_meta_factory(opname))
+    # op.factory(Object, Object, func=_opsame_meta_factory(opname))
     op.__name__ = opname 
     return op
 
@@ -185,3 +193,4 @@ lt = operator.lt
 # Make overrides for (Object, Object) calls
 eq.factory(Object, Object, func=_opsame_meta_factory('eq'))
 gt.factory(Object, Object, func=_opsame_meta_factory('gt'))
+    

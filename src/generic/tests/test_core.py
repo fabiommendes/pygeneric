@@ -1,6 +1,6 @@
 import pytest
+import six
 from generic import generic
-
 
 #
 # Fixtures
@@ -11,12 +11,12 @@ def addfunc():
     def addfunc(x, y):
         return x + y
     
-    @addfunc.overload
-    def addfunc(x: int, y: int):
+    @addfunc.register(int, int)
+    def addfunc(x, y):
         return x + y + 1
     
-    @addfunc.overload
-    def addfunc(x: float, y: float):
+    @addfunc.register(float, float)
+    def addfunc(x, y):
         return x + y + 1.5
     
     return addfunc
@@ -97,24 +97,25 @@ def test_overload_explicit(addfunc):
     assert addfloatint(1, 2) == 4.25
 
 
-def test_overload_implicit(addfunc):
-    old = addfunc
+if six.PY3:
+    def test_overload_implicit(addfunc):
+        old = addfunc
+        
+        @addfunc.overload
+        def addfunc(x: int, y: float) -> float: 
+            return x + y + 1.25
     
-    @addfunc.overload
-    def addfunc(x: int, y: float) -> float: 
-        return x + y + 1.25
-
-    assert addfunc is old 
-
-    @addfunc.overload
-    def addfloatint(x: float, y: int) -> float: 
-        return x + y + 1.25
-
-    assert addfunc(1, 2) == 4
-    assert addfunc(1, 2.0) == 4.25
-    assert addfunc(2.0, 1) == 4.25
-    assert addfunc(1.0, 2.0) == 4.5
-    assert addfloatint(1, 2) == 4.25
+        assert addfunc is old 
+    
+        @addfunc.overload
+        def addfloatint(x: float, y: int) -> float: 
+            return x + y + 1.25
+    
+        assert addfunc(1, 2) == 4
+        assert addfunc(1, 2.0) == 4.25
+        assert addfunc(2.0, 1) == 4.25
+        assert addfunc(1.0, 2.0) == 4.5
+        assert addfloatint(1, 2) == 4.25
 
 
 def test_factory(addfunc):

@@ -69,5 +69,6 @@ setup(
     install_requires=[
         'six',
     ],
+    zip_safe=False,
     **setup_kwds
 )
