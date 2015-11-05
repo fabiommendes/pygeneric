@@ -21,6 +21,13 @@ with open(os.path.join(SRC, 'generic', 'meta.py'), 'w') as F:
         '__version__ = %r\n' % VERSION +
         '__author__ = %r\n' % AUTHOR)
 
+
+#
+# Choose the default Python3 branch or the code converted by 3to2
+#
+PYSRC = 'src' if sys.version.startswith('3') else 'py2src'
+
+
 #
 # Cython stuff
 #
@@ -31,7 +38,7 @@ if 'PyPy' not in sys.version:
     except ImportError:
         warnings.warn('Please install Cython to compile faster versions of FGAme modules')
     setup_kwds.update(
-        ext_modules=cythonize('src/generic/*.pyx'),
+        ext_modules=cythonize('%s/generic/*.pyx' % PYSRC),
         cmdclass={'build_ext': build_ext})
 
 
@@ -56,8 +63,8 @@ setup(
         'Topic :: Software Development :: Libraries',
     ],
 
-    package_dir={'': 'src'},
-    packages=setuptools.find_packages('src'),
+    package_dir={'': PYSRC},
+    packages=setuptools.find_packages(PYSRC),
     license='GPL',
     install_requires=[
         'six',

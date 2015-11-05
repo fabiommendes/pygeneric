@@ -1,6 +1,10 @@
 '''
 Three and OrderedTree data structures that are used to resolve methods from
 function signatures.
+
+This is probably an overkill. This module is likely to be removed. It will 
+remain alive for a while until we are sure that the new method yields the
+same results.
 '''
 
 import collections

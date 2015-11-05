@@ -34,23 +34,22 @@ import sys
 import six
 import inspect
 import functools
-from generic.tree import PosetMap
 from collections import MutableMapping, Mapping
-from .util import raise_no_methods
+from .util import raise_no_methods, tname
 
 __all__ = ['Generic', 'generic', 'overload']
 
 
 try:
     from generic.core_fast import FastCache as _FastCache
-    _generic_bases = (_FastCache, MutableMapping)
+    _generic_base = type('Base', (_FastCache, MutableMapping), {})
 except ImportError:
-    _generic_bases = (MutableMapping,)
+    _generic_base = MutableMapping
     import warnings
     warnings.warn('no ctypes found: using slow version of generic type dispatch')
 
 
-class Generic(*_generic_bases):
+class Generic(_generic_base):
 
     '''A generic function is a collection of different implementations or
     "methods" under the same name, usually sharing a similar interface. When
@@ -72,8 +71,7 @@ class Generic(*_generic_bases):
         self.name = name
         self.doc = doc
         self._cache = {}
-        self._data = PosetMap(subclasses, {None: None})
-        self._factories = {}
+        self._registry = {None: None}
         self._last_func = None
         self._validate = validate or None
 
@@ -85,8 +83,7 @@ class Generic(*_generic_bases):
             try:
                 method = self[types]
             except KeyError:
-                msg = 'no methods found for %s' % print_signature(self, types)
-                raise TypeError(msg)
+                raise_no_methods(self, types=types)
         if method is None:
             raise TypeError('no fallback defined for %s()' % self.__name__)
         return method(*args, **kwds)
@@ -159,7 +156,6 @@ class Generic(*_generic_bases):
             argtypes = tuple(argtypes)
 
         self.register(*argtypes, func=func, restype=restype)
-
         
     def __getitem__(self, types):
         try:
@@ -172,27 +168,27 @@ class Generic(*_generic_bases):
             
     def __delitem__(self, types):
         raise NotImplementedError
-        del self._data[types]
-        if len(self._cache) == len(self._data) + 1:
-            del self._cache[types]  # Cache has the same items as self._data
+        del self._registry[types]
+        if len(self._cache) == len(self._registry) + 1:
+            del self._cache[types]  # Cache has the same items as self._registry
         else:
             self._cache.clear()
-            self._cache.update(self._data)
+            self._cache.update(self._registry)
 
     def __len__(self):
-        if self._data[None] is None:
-            return len(self._data) - 1 # exclude the None root fallback
+        if self._registry[None] is None:
+            return len(self._registry) - 1 # exclude the None root fallback
         else:
-            return len(self._data)
+            return len(self._registry)
 
     def __iter__(self):
         if None in self._cache:
-            for key in self._data:
+            for key in self._registry:
                 yield key
         else:
             # None is the root fallback method. If no method is assigned to
             # None, it should not be in the list of keys
-            for key in self._data:
+            for key in self._registry:
                 if key is not None:
                     yield key
 
@@ -218,7 +214,7 @@ class Generic(*_generic_bases):
         
         Raises a TypeError if no suitable implementation is found.'''
         
-        wrapped = self._data[types]
+        wrapped = dispatch(types, self._registry)
 
         # The None root is always present. It is assigned to None if no
         # fallback function is available
@@ -229,7 +225,6 @@ class Generic(*_generic_bases):
         implementation = factory(types, restype)
 
         func = self._cache[types] = implementation
-        self._cache_update()
         return func
 
     def which(self, *args):
@@ -242,16 +237,23 @@ class Generic(*_generic_bases):
         except KeyError:
             raise TypeError('no methods for %s' % types)
     
-    def register(self, *argtypes, func=None, restype=None):
+    def register(self, *argtypes, **kwds):
         '''Register a new implementation for the given sequence of input
         types.
         '''
+        
+        # Fetch keyword arguments (support Py2)
+        func = kwds.pop('func', None)
+        restype = kwds.pop('restype', None)
+        if kwds:
+            arg = kwds.popitem()[0]
+            raise TypeError('invalid keyword argument: %s' % arg)
         
         # We don't use the restype for now. Maybe in the future? Ideas?
         if func is None:
             def decorator(func):
                 self.register(*argtypes, func=func)
-                return _generic_or_func(self, func)
+                return self.__self_or_func(func)
             return decorator
         
         # Register factory in the internal dictionary
@@ -269,7 +271,7 @@ class Generic(*_generic_bases):
         if len(args) == 0 or not callable(args[0]):
             def decorator(func):
                 self.overload(func, *args, **kwds)
-                return _generic_or_func(self, func)
+                return self.__self_or_func(func)
             return decorator
 
         # Non decorator form of method call
@@ -278,13 +280,9 @@ class Generic(*_generic_bases):
         # No types given: inspect arguments
         _restype = object
         if len(args) == 0:
-            if self._is_fallback_signature(func):
+            if is_fallback_signature(func):
                 argtypes = None
-            elif six.PY2:
-                func_args = inspect.getargs(func.func_code).args
-                argtypes = [object] * len(func_args)
-            else:
-                argtypes, _restype = self._inspect_signature(func)
+            argtypes, _restype = inspect_signature(func)
 
         # Input types given
         if len(args) >= 1:
@@ -311,7 +309,7 @@ class Generic(*_generic_bases):
         else:
             return func
 
-    def factory(self, *argtypes, func=None, restype=None):
+    def factory(self, *argtypes, **kwds):
         '''Register a method factory.
         
         Everytime that the dispatcher reaches a method factory, it calls
@@ -319,6 +317,13 @@ class Generic(*_generic_bases):
         function is then registered in cache and is used in subsequent calls 
         to handle the given input types.
         '''
+        
+        # Fetch keyword arguments (support Py2)
+        func = kwds.pop('func', None)
+        restype = kwds.pop('restype', None)
+        if kwds:
+            arg = kwds.popitem()[0]
+            raise TypeError('invalid keyword argument: %s' % arg)
         
         # Call function in decorator form
         if func is None:
@@ -337,7 +342,7 @@ class Generic(*_generic_bases):
             raise ValueError('return type must be a type, got %s' % tname)
 
         # Prevent overwriting old values
-        if argtypes in self._data:
+        if argtypes in self._registry:
             types_repr = ', '.join(T.__name__ for T in argtypes)
             name = self.name
             msg = 'method %s(%s) is already defined' % (name, types_repr)
@@ -347,60 +352,29 @@ class Generic(*_generic_bases):
         if self._validate is not None:
             self._validate(argtypes, restype)
         
-        self._data[argtypes] = (func, restype)
-        subkeys = list(self._data.subkeys(argtypes))
+        self._registry[argtypes] = (func, restype)
+        self._registry[argtypes] = (func, restype)
+        subkeys = subtypes(argtypes, self._registry)
         for k in list(self._cache):
-            if subclasses(k, argtypes):
-                if not any(subclasses(k, K) for K in subkeys):
+            if subtypecheck(k, argtypes):
+                if not any(subtypecheck(k, K) for K in subkeys):
                     del self._cache[k]
         self._cache_update()
 
     #
     # Helper functions. Can be overloaded by sub-classes
     #
-    def _is_fallback_signature(self, func):
-        '''Inspect function arguments and return True if it should be
-        considered a fallback implementation.'''
-
-        # Todo: signatures that have *args are fallback
-        return False
-
-    def _inspect_signature(self, func):
-        '''Return dispatch conditions from func's argument annotations'''
-
-        try:
-            D = func.__annotations__
-            n_args = func.__code__.co_argcount - len(func.__defaults__ or ())
-            varnames = func.__code__.co_varnames[:n_args]
-            return tuple(D.get(name, object) for name in varnames), object
-
-        # Does not have annotations, maybe it is a builtin function. Try
-        # looking at the docstring
-        except AttributeError:
-            body, sep1, _tail = getattr(func, '__doc__', '').partition(')')
-            name, sep2, args = body.partition('(')
-
-            # Fail conditions
-            fail = (sep1 == '') or (sep2 == '')
-            if '[' in args:
-                fail = True
-
-            if fail:
-                print([body, sep1, sep2, name, args])
-                print(func)
-                print(func.__doc__)
-                raise ValueError(
-                    'could not inspect signature. '
-                    'Try giving the signature explicitly')
-
-            varnames = [x.strip() for x in args.split(',')]
-            return tuple(object for name in varnames), object
-
-    def _cache_update(self):
-        '''Call whenever cache is changed'''
-
-        pass
-
+    def __self_or_func(self, func):
+        '''Return generic if new defined function is shadowing the generic name
+        or the function otherwise. Used in decorators'''
+    
+        # Maybe use inspect for a more robust solution? Is it portable across 
+        # python implementations 
+        if self.__name__ == func.__name__:
+            return self
+        else:
+            return func
+    
 
 #
 # Uses the fast version of the __call__ method if available from C class
@@ -416,7 +390,7 @@ except AttributeError:
 #
 # Utility functions
 #
-def subclasses(types1, types2):
+def subtypecheck(types1, types2):
     '''Return True if all types in the sequence types1 are subclasses of the
     respective types in the sequence types2.
 
@@ -427,17 +401,17 @@ def subclasses(types1, types2):
     -------
 
     >>> import numbers
-    >>> subclasses((int, int), (object, numbers.Integral))
+    >>> subtypecheck((int, int), (object, numbers.Integral))
     True
 
-    >>> subclasses((int, int), None)
+    >>> subtypecheck((int, int), None)
     True
     '''
 
     if types2 is None:
         return True
     elif types1 is None:
-        return False
+        return types2 is False
 
     if len(types1) != len(types2):
         return False
@@ -445,21 +419,40 @@ def subclasses(types1, types2):
         return all(issubclass(T1, T2) for (T1, T2) in zip(types1, types2))
 
 
-def print_signature(func, types):
-    '''Return a pretty-printed version of an abstract call to some arguments
-    of the given sequence of types.
+def dispatch(T, D):
+    '''Dispatch algorithm.
+    
+    Return D[S] where S is the most specialized signature for which 
+    subtypecheck(T, S) is valid.'''
+    
+    subclass = subtypecheck
+    parents = [S for S in D if subclass(T, S)]
+    
+    for _ in range(len(parents)):
+        if len(parents) <= 1:
+            break
+        X, *tail = parents
+        parents = [S for S in tail if not subclass(X, S)]
+        parents.append(X)
+
+    if parents:
+        return D[parents[0]]
+    else:
+        raise KeyError(T)
 
 
-    Example
-    -------
+def subtypes(T, D):
+    '''Return all entries in D that are subtypes of T, i.e., aresubtypes(t_i, T)'''
+    
+    subclass = subtypecheck
+    return [S for S in D if subclass(S, T)]
 
-    >>> print_signature(int, (str, int))
-    'int(str, int)'
-    '''
 
-    fname = func.__name__
-    args = ', '.join(T.__name__ for T in types)
-    return '%s(%s)' % (fname, args)
+def supertypes(T, D):
+    '''Return all entries in D that are supertypes of T, i.e., aresubtypes(T, t_i)'''
+    
+    subclass = subtypecheck
+    return [S for S in D if subclass(T, S)]
 
 
 def generic(func=None, **kwds):
@@ -475,6 +468,51 @@ def generic(func=None, **kwds):
     generic = Generic(func.__name__)
     generic.overload(func)
     return generic
+
+
+def inspect_signature(func):
+    '''Return dispatch conditions from func's argument annotations'''
+
+    try:
+        if six.PY2:
+            func_args = inspect.getargs(func.func_code).args
+            return tuple([object] * len(func_args))
+
+        else:
+            D = func.__annotations__
+            n_args = func.__code__.co_argcount - len(func.__defaults__ or ())
+            varnames = func.__code__.co_varnames[:n_args]
+            return tuple(D.get(name, object) for name in varnames), object
+
+    # Does not have annotations, maybe it is a builtin function. Try
+    # looking at the docstring
+    except AttributeError:
+        body, sep1, _tail = getattr(func, '__doc__', '').partition(')')
+        name, sep2, args = body.partition('(')
+
+        # Fail conditions
+        fail = (sep1 == '') or (sep2 == '')
+        if '[' in args:
+            fail = True
+
+        if fail:
+            print([body, sep1, sep2, name, args])
+            print(func)
+            print(func.__doc__)
+            raise ValueError(
+                'could not inspect signature. '
+                'Try giving the signature explicitly')
+
+        varnames = [x.strip() for x in args.split(',')]
+        return tuple(object for name in varnames), object
+
+
+def is_fallback_signature(func):
+    '''Inspect function arguments and return True if it should be
+    considered a fallback implementation.'''
+
+    # Todo: signatures that have *args are fallback
+    return False
 
 
 def overload(genericfunc, *args, **kwds):
@@ -547,24 +585,9 @@ class mappingproxy(Mapping):
         return self.__mapping[key]
     
     
-def _generic_or_func(generic, func):
-    '''Return generic if new defined function is shadowing the generic name
-    or the function otherwise. Used in decorators'''
-    
-    # Maybe use inspect for a more robust solution? Is it portable across 
-    # python implementations 
-    if generic.__name__ == func.__name__:
-        return generic
-    else:
-        return func
-
-
-def _tname(x):
-    '''A shortcut to the object's type name'''
-    
-    return type(x).__name__
-
-
+#
+# Standard meta-factory functions
+#
 def _simple_factory(func, argtypes, restype):
     '''The most simple builder: return the function unchanged'''
     
@@ -581,7 +604,7 @@ def _restype_checker_factory(func, argtypes, restype):
     def checked(*args, **kwds):
         out = func(*args, **kwds)
         if not isinstance(out, restype):
-            raise TypeError('wrong return type: %s' % _tname(out))
+            raise TypeError('wrong return type: %s' % tname(out))
         return out
                  
     return checked
@@ -609,7 +632,7 @@ def _instance_check_factory(func, argtypes, restype, instancecheck=isinstance):
             raise TypeError('wrong number of arguments')
         for i, (x, T) in enumerate(zip(x, T)):
             if instancecheck(x, T):
-                fmt = i, _tname(x), T.__name__
+                fmt = i, tname(x), T.__name__
                 msg = 'error: %-th argument should be %s, got %s' % fmt
                 raise TypeError(msg)
         
@@ -618,8 +641,7 @@ def _instance_check_factory(func, argtypes, restype, instancecheck=isinstance):
         else:
             out = func(*args, **kwds)
             if not instancecheck(out, restype):
-                raise TypeError('wrong return type: %s' % _tname(out))
+                raise TypeError('wrong return type: %s' % tname(out))
             return out
                  
     return checked
-

@@ -164,5 +164,5 @@ def test_memory_leaks(addfunc):
     
     
 if __name__ == '__main__':
-    pytest.main('test_core.py -q --tb=native')
-    #pytest.main('test_core.py -q')
+    #pytest.main('test_core.py -q --tb=native')
+    pytest.main('test_core.py -q --capture=no')

@@ -2,6 +2,7 @@
 Base types for objects that delegate implementations of operations and 
 relations to generic functions.
 '''
+from __future__ import absolute_import # Avoid conflict with operator module in Py2
 import operator
 from . import generic
 from .util import raise_no_methods, get_no_methods_error, raise_unordered

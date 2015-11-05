@@ -17,11 +17,15 @@ __all__ = [
 ]
 
 # Import symbols with default implementations
+# (this has to be done like this because 3to2 do not understand class definitions
+# inside try/except blocks.
+ABCMeta = abc.ABCMeta
+class ABC(metaclass=ABCMeta):
+    pass
 try:
     ABC = abc.ABC
 except AttributeError:
-    class ABC(metaclass=abc.ABCMeta):
-        pass
+    pass
 
 try:
     from typing import Any
