@@ -9,7 +9,6 @@ BASE, _ = os.path.split(__file__)
 SRC = os.path.join(BASE, 'src')
 setup_kwds = {}
 
-
 #
 # Update VERSION and meta.py with meta information
 #
@@ -25,15 +24,15 @@ with open(os.path.join(SRC, 'generic', 'meta.py'), 'w') as F:
 #
 # Cython stuff
 #
-try:
-    if 'PyPy' not in sys.version:
+if 'PyPy' not in sys.version:
+    try:
         from Cython.Build import cythonize
         from Cython.Distutils import build_ext
-        setup_kwds.update(
-            ext_modules=cythonize('src/generic/*.pyx'),
-            cmdclass={'build_ext': build_ext})
-except ImportError:
-    pass
+    except ImportError:
+        warnings.warn('Please install Cython to compile faster versions of FGAme modules')
+    setup_kwds.update(
+        ext_modules=cythonize('src/generic/*.pyx'),
+        cmdclass={'build_ext': build_ext})
 
 
 #

@@ -33,22 +33,23 @@ Python 2 and 3
 import sys
 import six
 import inspect
+import functools
 from generic.tree import PosetMap
-from collections import MutableMapping
+from collections import MutableMapping, Mapping
 
 __all__ = ['Generic', 'generic', 'overload']
 
+
 try:
     from generic.core_fast import FastCache as _FastCache
-
-    class Base(_FastCache, MutableMapping):
-        pass
-
+    _generic_bases = (_FastCache, MutableMapping)
 except ImportError:
-    Base = MutableMapping
+    _generic_bases = (MutableMapping,)
+    import warnings
+    warnings.warn('no ctypes found: using slow version of generic type dispatch')
 
 
-class Generic(Base):
+class Generic(*_generic_bases):
 
     '''A generic function is a collection of different implementations or
     "methods" under the same name, usually sharing a similar interface. When
@@ -71,9 +72,9 @@ class Generic(Base):
         self.doc = doc
         self._cache = {}
         self._data = PosetMap(subclasses, {None: None})
+        self._factories = {}
         self._last_func = None
 
-    # Generic magic methods ###################################################
     def __call__(self, *args, **kwds):
         types = tuple(map(type, args))
         try:
@@ -94,11 +95,10 @@ class Generic(Base):
         return '<generic function %(name)s() with %(size)s methods>' % locals()
 
     def __get__(self, instance, cls=None):
-        '''Implements the descriptor interface in order to work as method'''
+        '''Makes it work as a method'''
 
         raise NotImplementedError
 
-    # Function properties #####################################################
     @property
     def __annotations__(self):
         return {}
@@ -135,11 +135,131 @@ class Generic(Base):
     def __doc__(self, value):
         self.doc = value
 
-    @property
-    def cache(self):
-        return dict(self._cache)
+    def __contains__(self, obj):
+        try:
+            self[obj]
+        except KeyError:
+            return False
+        else:
+            return True
 
-    # API #####################################################################
+    def __setitem__(self, argtypes, func):
+        # Normalize inputs
+        if argtypes is None:
+            restype = None
+        elif isinstance(argtypes, type):
+            argtypes, restype = (argtypes,), None
+        if argtypes is not None:
+            if len(argtypes) == 2 and not isinstance(argtypes[0], type):
+                argtypes, restype = argtypes
+            else:
+                restype = None
+            argtypes = tuple(argtypes)
+
+        # Register factory
+        wrapped = functools.partial(_simple_factory, func) 
+        self.factory(*argtypes, factory=wrapped, restype=restype)
+        
+        # Update documentation, if empty
+        if not self.__doc__:
+            self.__doc__ = getattr(func, '__doc__', '')            
+        
+    def __getitem__(self, types):
+        try:
+            return self._cache[types]
+        except KeyError:
+            try:
+                return self.dispatch(*types)
+            except TypeError:
+                raise KeyError(types)
+            
+    def __delitem__(self, types):
+        raise NotImplementedError
+        del self._data[types]
+        if len(self._cache) == len(self._data) + 1:
+            del self._cache[types]  # Cache has the same items as self._data
+        else:
+            self._cache.clear()
+            self._cache.update(self._data)
+
+    def __len__(self):
+        if self._data[None] is None:
+            return len(self._data) - 1 # exclude the None root fallback
+        else:
+            return len(self._data)
+
+    def __iter__(self):
+        if None in self._cache:
+            for key in self._data:
+                yield key
+        else:
+            # None is the root fallback method. If no method is assigned to
+            # None, it should not be in the list of keys
+            for key in self._data:
+                if key is not None:
+                    yield key
+
+    #
+    # API
+    #
+    def cache(self):
+        '''Return a mapping proxy for the type cache'''
+        
+        return mappingproxy(self._cache)
+    
+    def registry(self):
+        '''Return a proxy with all types explicitly registered for the generic
+        function'''
+        
+        #TODO: make single dispatch also map from single type to implementation
+        # as in singledispatch 
+        return mappingproxy(self)
+    
+    def dispatch(self, *types):
+        '''Runs the dispatch algorithm to return the best available 
+        implementation for the given types registered on the generic function.
+        
+        Raises a TypeError if no suitable implementation is found.'''
+        
+        wrapped = self._data[types]
+
+        # The None root is always present. It is assigned to None if no
+        # fallback function is available
+        if wrapped is None:
+            raise TypeError(types)
+
+        factory, restype = wrapped
+        implementation = factory(types, restype)
+
+        func = self._cache[types] = implementation
+        self._cache_update()
+        return func
+
+    def which(self, *args):
+        '''Returns the concrete method that would be used if called with the
+        given positional arguments.'''
+
+        types = tuple(map(type, args))
+        try:
+            return self[types]
+        except KeyError:
+            raise TypeError('no methods for %s' % types)
+    
+    def register(self, *types, func=None, restype=None):
+        '''Register a new implementation for the given sequence of input
+        types.
+        '''
+        
+        # We don't use the restype for now. Maybe in the future? Ideas?
+        if func is None:
+            def decorator(func):
+                self.register(*types, func=func)
+                return _generic_or_func(self, func)
+            return decorator
+        
+        # Save in the internal dictionary
+        self[types] = func
+
     def overload(self, *args, **kwds):
         '''Decorator used to register method overloads'''
 
@@ -147,10 +267,7 @@ class Generic(Base):
         if len(args) == 0 or not callable(args[0]):
             def decorator(func):
                 self.overload(func, *args, **kwds)
-                if func.__name__ == self.__name__:
-                    return self
-                else:
-                    return func
+                return _generic_or_func(self, func)
             return decorator
 
         # Non decorator form of method call
@@ -192,17 +309,51 @@ class Generic(Base):
         else:
             return func
 
-    def which(self, *args, **kwds):
-        '''Instead of calling the generic function with the given arguments,
-        it returns the concrete method that would be used for the call.'''
+    def factory(self, *types, factory=None, restype=None):
+        '''Register a method factory.
+        
+        Everytime that the dispatcher reaches a method factory, it calls
+        ``factory(argtypes, restype)`` and expects to receive a function. This
+        function is then registered in cache and is used in subsequent calls 
+        to handle the given input types.
+        '''
+        
+        # Call function in decorator form
+        if factory is None:
+            def decorator(factory):
+                self.factory(*types, factory=factory, restype=restype)
+                return factory
+            return decorator
+        
+        # Check for invalid inputs
+        if types is not None:
+            if not all(isinstance(T, type) for T in types):
+                types = str(types)
+                raise ValueError('must be a tuple of types, got %s' % types)
+        if not isinstance(restype, (type, type(None))):
+            tname = type(restype).__name__
+            raise ValueError('return type must be a type, got %s' % tname)
 
-        types = tuple(map(type, args))
-        try:
-            return self[types]
-        except KeyError:
-            raise ValueError('no methods for %s' % types)
+        # Prevent overwriting old values
+        if types in self._data:
+            types_repr = ', '.join(T.__name__ for T in types)
+            name = self.name
+            msg = 'method %s(%s) is already defined' % (name, types_repr)
+            raise TypeError(msg)
 
-    # Helper functions. Can be overloaded by sub-classes ######################
+        # Add keys and update cache
+        self._data[types] = (factory, restype)
+        subkeys = list(self._data.subkeys(types))
+        for k in list(self._cache):
+            if subclasses(k, types):
+                if not any(subclasses(k, K) for K in subkeys):
+                    del self._cache[k]
+        self._cache_update()
+
+
+    #
+    # Helper functions. Can be overloaded by sub-classes
+    #
     def _is_fallback_signature(self, func):
         '''Inspect function arguments and return True if it should be
         considered a fallback implementation.'''
@@ -241,119 +392,10 @@ class Generic(Base):
             varnames = [x.strip() for x in args.split(',')]
             return tuple(object for name in varnames), object
 
-    def _wrap_method(self, method, argtypes, restype):
-        '''Wraps a callable implementation of some given signature. The wrapped
-        version is stored internally and may store metadata or implement
-        some special behavior.
-
-        The default implementation does nothing and simply return method.
-        '''
-
-        return method
-
-    def _unwrap_method(self, method, argtypes):
-        '''Unwraps a method wrapped with `_wrap_method()` and specialize it
-        to the given argtypes.
-
-        Must return a python callable. This return object is than stored into
-        cache for faster access.'''
-
-        return method
-
     def _cache_update(self):
         '''Call whenever cache is changed'''
 
         pass
-
-    # Dictionary interface ####################################################
-    def __contains__(self, obj):
-        try:
-            self[obj]
-        except KeyError:
-            return False
-        else:
-            return True
-
-    def __setitem__(self, argtypes, func):
-        # Normalize inputs
-        if argtypes is None:
-            restype = None
-        elif isinstance(argtypes, type):
-            argtypes, restype = (argtypes,), None
-        if argtypes is not None:
-            if len(argtypes) == 2 and not isinstance(argtypes[0], type):
-                argtypes, restype = argtypes
-            else:
-                restype = None
-            argtypes = tuple(argtypes)
-
-        # Check for invalid inputs
-        if argtypes is not None:
-            if not all(isinstance(T, type) for T in argtypes):
-                argtypes = str(argtypes)
-                raise ValueError('must be a tuple of types, got %s' % argtypes)
-        if not isinstance(restype, (type, type(None))):
-            tname = type(restype).__name__
-            raise ValueError('return type must be a type, got %s' % tname)
-
-        # Prevent overwriting old values
-        if argtypes in self._data:
-            types_repr = ', '.join(T.__name__ for T in argtypes)
-            name = self.name
-            msg = 'method %s(%s) is already defined' % (name, types_repr)
-            raise TypeError(msg)
-
-        # Add keys and update cache
-        wrapped_method = self._wrap_method(func, argtypes, restype)
-        self._data[argtypes] = wrapped_method
-        subkeys = list(self._data.subkeys(argtypes))
-        for k in list(self._cache):
-            if subclasses(k, argtypes):
-                if not any(subclasses(k, K) for K in subkeys):
-                    del self._cache[k]
-        self._cache_update()
-
-        # Update documentation, if empty
-        if not self.__doc__:
-            self.__doc__ = getattr(func, '__doc__', '')
-
-    def __getitem__(self, types):
-        try:
-            return self._cache[types]
-        except KeyError:
-            method = self._data[types]
-
-            # The None root is always present. It is assigned to None if no
-            # fallback function is available
-            if method is None:
-                raise KeyError(types)
-
-            func = self._cache[types] = self._unwrap_method(method, types)
-            self._cache_update()
-            return func
-
-    def __delitem__(self, types):
-        raise NotImplementedError
-        del self._data[types]
-        if len(self._cache) == len(self._data) + 1:
-            del self._cache[types]  # Cache has the same items as self._data
-        else:
-            self._cache.clear()
-            self._cache.update(self._data)
-
-    def __len__(self):
-        return len(self._data)
-
-    def __iter__(self):
-        if None in self._cache:
-            for key in self._data:
-                yield key
-        else:
-            # None is the root fallback method. If no method is assigned to
-            # None, it should not be in the list of keys
-            for key in self._data:
-                if key is not None:
-                    yield key
 
 
 #
@@ -366,11 +408,10 @@ try:
 except AttributeError:
     pass
 
-###############################################################################
-#                            Utility functions
-###############################################################################
 
-
+#
+# Utility functions
+#
 def subclasses(types1, types2):
     '''Return True if all types in the sequence types1 are subclasses of the
     respective types in the sequence types2.
@@ -486,29 +527,95 @@ def overload(genericfunc, *args, **kwds):
     return decorator
 
 
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+class mappingproxy(Mapping):
+    '''A read-only proxy to a mapping'''
+    
+    def __init__(self, mapping):
+        self.__mapping = mapping
+        
+    def __len__(self):
+        return len(self.__mapping)
+    
+    def __iter__(self):
+        return iter(self.__mapping)
+    
+    def __getitem__(self, key):
+        return self.__mapping[key]
+    
+    
+def _generic_or_func(generic, func):
+    '''Return generic if new defined function is shadowing the generic name
+    or the function otherwise. Used in decorators'''
+    
+    # Maybe use inspect for a more robust solution? Is it portable across 
+    # python implementations 
+    if generic.__name__ == func.__name__:
+        return generic
+    else:
+        return func
 
-    ##########################################################################
-    # Move to real unit tests!
-    ##########################################################################
 
-    @generic
-    def f(x, y):
-        return x + y + 3.14
+def _tname(x):
+    '''A shortcut to the object's type name'''
+    
+    return type(x).__name__
 
-    @overload(f, [int, int])
-    def f(x, y):
-        return x + y + 3
 
-    assert f(0, 0) == 3
-    assert f(0.0, 0.0) == 3.14
+def _simple_factory(func, argtypes, restype):
+    '''The most simple builder: return the function unchanged'''
+    
+    return func
 
-    @overload(f, (int, float))
-    @overload(f, (float, int))
-    def f(x, y):
-        return x + y + 3.07
 
-    assert f(0.0, 0) == 3.07
-    assert f(0, 0.0) == 3.07
+def _restype_checker_factory(func, argtypes, restype):
+    '''Simply check if the return type is correct'''
+
+    if restype is None:
+        return func
+        
+    @functools.wraps
+    def checked(*args, **kwds):
+        out = func(*args, **kwds)
+        if not isinstance(out, restype):
+            raise TypeError('wrong return type: %s' % _tname(out))
+        return out
+                 
+    return checked
+
+    
+def _strict_check_factory(func, argtypes, restype):
+    '''Check if all input/output types are *exactly* the same as declared.
+    
+    Raise type errors with subclasses.'''
+    
+    return _instance_check_factory(func, argtypes, restype, 
+                                   instancecheck=lambda x, y: x is y) 
+
+
+def _instance_check_factory(func, argtypes, restype, instancecheck=isinstance):
+    '''Check if all input/output types are the same as declared.
+    
+    Subclasses are also allowed.'''
+    
+    N = len(argtypes)
+    
+    @functools.wraps
+    def checked(*args, **kwds):
+        if len(args) == N:
+            raise TypeError('wrong number of arguments')
+        for i, (x, T) in enumerate(zip(x, T)):
+            if instancecheck(x, T):
+                fmt = i, _tname(x), T.__name__
+                msg = 'error: %-th argument should be %s, got %s' % fmt
+                raise TypeError(msg)
+        
+        if restype is None:
+            return func(*args, **kwds)
+        else:
+            out = func(*args, **kwds)
+            if not instancecheck(out, restype):
+                raise TypeError('wrong return type: %s' % _tname(out))
+            return out
+                 
+    return checked
+
