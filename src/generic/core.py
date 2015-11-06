@@ -214,16 +214,26 @@ class Generic(_generic_base):
         
         Raises a TypeError if no suitable implementation is found.'''
         
-        wrapped = dispatch(types, self._registry)
-
-        # The None root is always present. It is assigned to None if no
-        # fallback function is available
-        if wrapped is None:
-            raise_no_methods(self, types=types)
-
-        factory, restype = wrapped
-        implementation = factory(types, restype)
-
+        registry = self._registry
+        while True:
+            T = dispatch(types, registry)
+            wrapped = registry[T]
+    
+            # The None root is always present. It is assigned to None if no
+            # fallback function is available
+            if wrapped is None:
+                raise_no_methods(self, types=types)
+    
+            factory, restype = wrapped
+            implementation = factory(types, restype)
+            
+            if implementation is NotImplemented:
+                if registry is self._registry:
+                    registry = dict(registry)
+                del registry[T]
+                continue
+            break
+                
         func = self._cache[types] = implementation
         return func
 
@@ -417,14 +427,14 @@ def subtypecheck(types1, types2):
         return all(issubclass(T1, T2) for (T1, T2) in zip(types1, types2))
 
 
-def dispatch(T, D):
+def dispatch(T, L):
     '''Dispatch algorithm.
     
-    Return D[S] where S is the most specialized signature for which 
+    Return S in L where S is the most specialized signature for which 
     subtypecheck(T, S) is valid.'''
     
     subclass = subtypecheck
-    parents = [S for S in D if subclass(T, S)]
+    parents = [S for S in L if subclass(T, S)]
     
     for _ in range(len(parents)):
         if len(parents) <= 1:
@@ -435,10 +445,9 @@ def dispatch(T, D):
             parents.append(X)
 
     if parents:
-        return D[parents[0]]
+        return parents[0]
     else:
         raise KeyError(T)
-
 
 def subtypes(T, D):
     '''Return all entries in D that are subtypes of T, i.e., aresubtypes(t_i, T)'''

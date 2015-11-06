@@ -4,7 +4,7 @@ relations to generic functions.
 '''
 import operator
 from . import generic
-from .util import raise_no_methods, get_no_methods_error, raise_unordered
+from .util import raise_no_methods, raise_unordered
 
 
 __all__ = [
@@ -91,30 +91,6 @@ class Object(object):
 # Utility functions (maybe some of them are useful enough to go to 
 # pygeneric.util)
 #
-def _not_implemented_factory(generic, argtypes):
-    '''Return a function that raises a TypeError when called'''
-
-    error = get_no_methods_error(generic, types=argtypes)    
-    
-    def not_implemented_method(*args, **kwds):
-        raise error
-    
-    not_implemented_method.implemented = False
-    return not_implemented_method
-
-
-def _opsame_not_implemented_factory(name, argtypes):
-    '''Return a function that raises a TypeError when called'''
-    
-    T = argtypes[0]
-        
-    def not_implemented_method(*args, **kwds):
-        raise TypeError('please implement __%ssame__() on %r in order to support this operation' % (name, T.__name__))
-    
-    not_implemented_method.implemented = False
-    return not_implemented_method
-
-
 def _opsame_meta_factory(opname):
     '''Returns a factory tha can be used to test if the object implements a 
     __<opname>same__() method'''
@@ -127,10 +103,9 @@ def _opsame_meta_factory(opname):
             try:
                 return getattr(T1, samemethod)
             except AttributeError:
-                return _opsame_not_implemented_factory(opname, argtypes) 
-        else:
-            return _not_implemented_factory(add, (T1, T2))
-    
+                pass 
+        return NotImplemented
+        
     return factory
 
 
@@ -162,8 +137,8 @@ def _arithmetic_op_factory(opname):
             return getattr(y, rmethod)(x)
         except AttributeError:
             raise_no_methods(op, args=(x, y))
-    
-    # op.factory(Object, Object, func=_opsame_meta_factory(opname))
+            
+    op.factory(Object, Object, func=_opsame_meta_factory(opname))    
     op.__name__ = opname 
     return op
 
