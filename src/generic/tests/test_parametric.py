@@ -7,7 +7,7 @@ def A():
     class A(Parametric):
         __abstract__ = True
         __parameters__ = [int, type]
-    return AX
+    return A
 
 @pytest.fixture
 def B():

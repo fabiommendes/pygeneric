@@ -232,30 +232,6 @@ lshift = _arithmetic_op_factory('lshift')
 #
 # Binary relations
 #
-@generic
-def eq(x, y):
-    out = x.__eq__(y)
-    if out is NotImplemented:
-        out = y.__eq__(x)
-    if out is NotImplemented:
-        return x is y
-    return out
-
-eq.register(Object, Object, func=_opsame_meta_factory('eq'), factory=True)
-
-
-@generic
-def ne(x, y):
-    out = x.__ne__(y)
-    if out is NotImplemented:
-        out = y.__ne__(x)
-    if out is NotImplemented:
-        return False
-    return not (x == y)
-
-ne.register(Object, Object, func=_opsame_meta_factory('ne'), factory=True)
-
-
 def _relational_op_factory(opname, ropname):
     """Creates a generic arithmetic operator with the given name"""
 
@@ -298,17 +274,128 @@ lt = _relational_op_factory('lt', 'gt')
 le = _relational_op_factory('le', 'ge')
 
 
+@generic
+def eq(x, y):
+    # Python 2 does not guarantee that __eq__ operator exists!
+    try:
+        out = x.__eq__(y)
+    except AttributeError:
+        out = NotImplemented
+
+    if out is NotImplemented:
+        try:
+            out = y.__eq__(x)
+        except AttributeError:
+            out = NotImplemented
+
+    if out is NotImplemented:
+        out = x is y
+    return out
+
+
+@eq.register(Object, Object, factory=True)
+def _eq_factory(argtypes, restype):
+    T1, T2 = argtypes
+
+    # Try subclass relations
+    if issubclass(T1, T2):
+        try:
+            return T2.__eqsame__
+        except AttributeError:
+            pass
+    elif issubclass(T2, T1):
+        try:
+            return T1.__eqsame__
+        except AttributeError:
+            pass
+
+    # If we reach here, there are no overloads for (T1, T2), use the default
+    # test for object equality
+    return lambda x, y: x is y
+
+
+@eq.register(Object, object)
+def eq(x, y):
+    out = y.__eq__(x)
+    return False if out is NotImplemented else out
+
+
+@eq.register(object, Object)
+def eq(x, y):
+    return False
+
+
+@generic
+def ne(x, y):
+    # Python 2 does not guarantee that __ne__ operator exists!
+    try:
+        out = x.__ne__(y)
+    except AttributeError:
+        out = NotImplemented
+
+    if out is NotImplemented:
+        try:
+            out = y.__ne__(x)
+        except AttributeError:
+            out = NotImplemented
+
+    if out is NotImplemented:
+        out = not (x == y)
+    return out
+
+
+@ne.register(Object, Object, factory=True)
+def _ne_factory(argtypes, restype):
+    T1, T2 = argtypes
+
+    # Try subclass relations
+    if issubclass(T1, T2):
+        try:
+            return T2.__nesame__
+        except AttributeError:
+            pass
+    elif issubclass(T2, T1):
+        try:
+            return T1.__nesame__
+        except AttributeError:
+            pass
+
+    # If we reach here, there are no overloads for (T1, T2), use the default
+    # test for object equality
+    return lambda x, y: not (x == y)
+
+
+@ne.register(Object, object)
+def ne(x, y):
+    out = y.__ne__(x)
+    return not (x == y) if out is NotImplemented else out
+
+
+@ne.register(object, Object)
+def ne(x, y):
+    return not (x == y)
+
 #
 # Total ordering relations
 #
 @gt.register(TotalOrdered, TotalOrdered)
 def gt(x, y):
+    # Python 2 may implement relations using the __cmp__ method.  This is true
+    # for builtins, for instance. We have to check all failure points to see
+    # if a __cmp__ function is implemented.
     try:
         out = x.__gt__(y)
     except AttributeError:
+        if hasattr(x, '__cmp__'):
+            return x.__cmp__(y) == 1
         raise RuntimeError('TotalOrdered object does not implement a __gt__ relation')
     if out is NotImplemented:
-        out = y.__lt__(x)
+        try:
+            out = y.__lt__(x)
+        except AttributeError:
+            if hasattr(x, '__cmp__'):
+                return y.__cmp__(x) == -1
+            out = NotImplemented
     if out is NotImplemented:
         raise_unordered(x, y)
     return out

@@ -77,10 +77,28 @@ setup(
     author=AUTHOR,
     author_email='fabiomacedomendes@gmail.com',
     url='https://github.com/fabiommendes/pygeneric',
-    long_description=open(os.path.join(BASE, 'README.txt')).read(),
+    long_description="""
+`pygeneric` implements generic functions with type dispatch in Python. A generic
+function groups different implementations (or methods) under the same name.
+The actual implementation is then chosen at runtime depending on the function
+arguments.
+
+The implementation is loosely inspired in the Julia language. We also shamelessly
+steal some other features of Julia and adapted them to Python:
+    * Parametric types.
+    * A type conversion/promotion system integrated with arithmetic operations.
+    * A generic Object base class that delegates all binary operations to the
+      corresponding generic functions (i.e., instead of implementing
+      Object.__add__, we overload add(Object, Object)).
+
+This package works with Python 3 and Python 2, but it is getting increasingly
+more difficult to keep Python 2 support as we implement more advanced features.
+We would love to let it go of Python 2, so please tell us if you use this package
+in Python 2.
+""",
 
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Operating System :: POSIX',
@@ -93,6 +111,7 @@ setup(
     license='GPL',
     install_requires=[],
     zip_safe=False,
-    tests_require=['pytest', 'psutil'],
+    tests_require=['pytest', 'psutil', 'six'],
+    setup_requires=[],
     **setup_kwds
 )

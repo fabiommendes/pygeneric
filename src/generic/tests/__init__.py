@@ -1,1 +1,0 @@
-from generic.tests import test_parametric

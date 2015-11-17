@@ -12,6 +12,13 @@ __all__ = [
     'promote_type',
 ]
 
+# In Python 2 we have to handle new style vs old style classes
+Type = set([type])
+class _cls:
+    pass
+Type.add(_cls)
+Type = tuple(Type)
+
 
 #
 # Define the convert() function and friends.
@@ -49,7 +56,7 @@ def convert(value, T):
     try:
         converter = get_conversion(value.__class__, T)
         return converter(value)
-    except ValueError:
+    except TypeError:
         if isinstance(value, T):
             return value
         raise
@@ -67,12 +74,13 @@ def get_conversion(from_type, to_type):
             if issubclass(to_type, from_type):
                 return _do_nothing
         except TypeError:
-            raise TypeError('not types: %r, %r' % (from_type, to_type))
+            raise ValueError('not types: %r, %r' % (from_type, to_type))
 
     # Handle key error
-    if not (isinstance(from_type, type) and isinstance(to_type, type)):
+    if not (isinstance(from_type, Type) and isinstance(to_type, Type)):
+        print(Type)
         fmt = type(from_type).__name__, type(to_type).__name__
-        raise ValueError('expect types, got: (%s, %s)' % fmt)
+        raise ValueError('not types: %r, %r' % (from_type, to_type))
     fmt = from_type.__name__, to_type.__name__
     msg = "cannot convert '%s' to '%s'" % fmt
     raise TypeError(msg)
@@ -195,8 +203,20 @@ def get_promotion(T1, T2):
 
     # No valid rules found
     if not valid:
-        aux = (T1.__name__, T2.__name__)
-        raise TypeError('no promotion rule found for %s and %s' % aux)
+        if issubclass(T1, T2):
+            # Try to convert to subtype
+            def promotion(x, y):
+                try:
+                    return x, convert(y, T1)
+                except TypeError:
+                    return x, y
+
+            return promotion
+        elif issubclass(T2, T1):
+            return get_promotion(T2, T1)
+        else:
+            aux = (T1.__name__, T2.__name__)
+            raise TypeError('no promotion rule found for %s and %s' % aux)
 
     # More than one rule was found
     if len(valid) > 1:
@@ -208,8 +228,8 @@ def get_promotion(T1, T2):
     return rules[valid[0]]
 
 
-def set_promotion(T1, T2, function=None, symmetric=True,
-                  outtype=None):
+def set_promotion(T1, T2, *, function=None, symmetric=True,
+                  restype=None):
     """Define the promotion rule for the pair of types (T1, T2).
 
     It is usually more convenient to use the set_promotion_rule() function.
@@ -226,7 +246,7 @@ def set_promotion(T1, T2, function=None, symmetric=True,
     symmetric : bool
         If True (default), the promotion is considered to be symmetric: i.e.,
         promotion for (T2, T1) is given calling f(y, x)
-    outtype : type
+    restype : type
         Optional type of the promotion. It is considered to be a bad practice
         to define a promotion that may return a different type depending on the
         argument values. This optional parameters tells the expected output
@@ -237,24 +257,27 @@ def set_promotion(T1, T2, function=None, symmetric=True,
     # Decorator form
     if function is None:
         def decorator(func):
-            set_promotion(T1, T2, func)
+            set_promotion(T1, T2, function=func)
             return func
         return decorator
 
-    if (T1, T2) in PROMOTION_FUNCTIONS:
-        out_name = outtype.__name__ if outtype else (function.__name__ + '()')
+    # Check if promotion is valid
+    if T1 is T2:
+        raise RuntimeError('cannot set a promotion rule for identical types.')
+    if (T1, T2) in PROMOTION_FUNCTIONS or (symmetric and (T2, T1) in PROMOTION_FUNCTIONS):
+        out_name = restype.__name__ if restype else (function.__name__ + '()')
         fmt = T1.__name__, T2.__name__, out_name
-        raise RuntimeError(
-            'cannot overwrite promotion rule: (%s, %s) --> %s' % fmt)
+        msg = 'cannot overwrite promotion rule: (%s, %s) --> %s' % fmt
+        raise RuntimeError(msg)
 
     PROMOTION_FUNCTIONS[T1, T2] = function
-
+    PROMOTION_RULES[T1, T2] = restype
     if symmetric:
         def reverse_function(x, y):
             y, x = function(y, x)
             return x, y
-
         PROMOTION_FUNCTIONS[T2, T1] = reverse_function
+        PROMOTION_RULES[T2, T1] = restype
 
 
 def set_promotion_rule(T1, T2, T3):
@@ -271,40 +294,37 @@ def set_promotion_rule(T1, T2, T3):
             'cannot overwrite promotion rule: (%s, %s) --> %s' % fmt)
 
     # Check trivial promotion
-    if T1 is T2 and T2 is T3:
-        def _do_nothing(x, y):
-            return (x, y)
-        PROMOTION_FUNCTIONS[T1, T2] = PROMOTION_FUNCTIONS[T2, T1] = _do_nothing
-        return
+    if T1 is T2:
+        raise RuntimeError('cannot set a promotion rule for identical types.')
 
     # Saves the direct promotion T1, T2 -> T3
     convert13 = get_conversion(T1, T3)
     convert23 = get_conversion(T2, T3)
 
-    if T3 is T1:
+    if T1 is T3:
         def promote_direct(x, y):
             return (x, convert23(y))
-    elif T3 is T2:
+
+        def promote_reverse(y, x):
+            return (convert23(y), x)
+
+    elif T2 is T3:
         def promote_direct(x, y):
             return (convert13(x), y)
+
+        def promote_reverse(y, x):
+            return (y, convert13(x))
+
     else:
         def promote_direct(x, y):
             x = convert13(x)
             y = convert23(y)
             return (x, y)
 
-    # Saves the reverse promotion T2, T1 -> T3
-    PROMOTION_RULES[T2, T1] = T3
-
-    if T3 is T1:
-        def promote_reverse(x, y):
-            return (convert23(y), x)
-    elif T3 is T2:
-        def promote_reverse(x, y):
-            return (y, convert13(x))
-    else:
-        def promote_reverse(x, y):
-            return (convert23(y), convert13(x))
+        def promote_reverse(y, x):
+            x = convert13(x)
+            y = convert23(y)
+            return (y, x)
 
     PROMOTION_FUNCTIONS[T1, T2] = promote_direct
     PROMOTION_FUNCTIONS[T2, T1] = promote_reverse
@@ -333,6 +353,9 @@ def promote_type(T1, T2):
 set_conversion(int, float, float)
 set_conversion(int, complex, complex)
 set_conversion(float, complex, complex)
+set_conversion(bool, int, int)
+set_conversion(bool, float, float)
+set_conversion(bool, complex, complex)
 
 
 @set_conversion(float, bool)
@@ -357,8 +380,12 @@ def number2int(x):
         raise InexactError(x)
 
 #
+
 # Promotion rules
 #
 set_promotion_rule(int, float, float)
 set_promotion_rule(int, complex, complex)
 set_promotion_rule(float, complex, complex)
+set_promotion_rule(bool, int, int)
+set_promotion_rule(bool, float, float)
+set_promotion_rule(bool, complex, complex)

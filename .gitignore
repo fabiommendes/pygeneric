@@ -1,8 +1,15 @@
 /build/
 /dist/
 /py2src/
-/__pycache__/
 /.idea/
 /.eggs/
 /.settings/
 /.benchmarks/
+/doc/build/
+**/__pycache__/
+**/htmlcov/
+html.zip
+.project
+.pydevproject
+*.so
+*.pyc

@@ -1,8 +1,7 @@
 import pytest
 from generic.op import Object, add, sub, mul, div, eq, ne, gt, lt, ge, le 
-#
-# Fixtures
-#
+
+
 @pytest.fixture
 def T():
     class T(Object):
@@ -16,7 +15,6 @@ def T():
             return 'T(%s)' % self.data
         
         def __eqsame__(self, other):
-            print(self, other)
             return self.data == other.data
         
     @add.register(int, T)
@@ -30,7 +28,7 @@ def T():
     return T
 
 #
-# Test functionality -- arithmetic operations
+# Test arithmetic operations
 #
 def test_simple_add(T):
     a = T(1)
@@ -42,8 +40,8 @@ def test_simple_add(T):
     
 
 def test_overloaded_add(T):
-    add.register(T, float, func=add[T, int])
-    add.register(float, T, func=add[int, T])
+    add.register(T, float, func=lambda x, y: T(x.data + y))
+    add.register(float, T, func=lambda x, y: T(x + y.data))
     a = T(1)
     b = T(2)
     c = T(3)
@@ -59,24 +57,41 @@ def test_fails_for_no_methods(T):
     with pytest.raises(TypeError):
         1.0 + a
         
-        
-def test_generic_operators_work_for_non_generic_types(T):
-    assert add(1, 1) == 2
-    assert add(1.0, 1) == 2
-    assert sub(1, 1) == 0
-    assert sub(1.0, 1) == 0
-    assert mul(1, 1) == 1
-    assert mul(1.0, 1) == 1
-    assert div(1, 1) == 1
-    assert div(1.0, 1) == 1
 
-    
+def test_arithmetic_works_with_third_type(T):
+    class B:
+        def __add__(self, other):
+            return 1 + other
+
+        def __radd__(self, other):
+            return other + 1
+
+    a = T(2)
+    b = B()
+    assert a + b == T(3)
+    assert b + a == T(3)
+
+
+def test_equality_comparisons_works_with_third_type(T):
+    class B:
+        def __eq__(self, other):
+            return other == T(1)
+
+    a = T(1)
+    c = T(2)
+    b = B()
+    assert a == b
+    assert b == a
+    assert c != b
+    assert b != c
+
+
 #
-# Test functionality -- relations
+# Test relations
 #
 def test_overload_eq(T):
-    eq.register(T, int, func=lambda x, y: x.data == y)
-    eq.register(int, T, func=lambda x, y: y.data == x)
+    eq.register(T, object, func=lambda x, y: x.data == y)
+    eq.register(object, T, func=lambda x, y: y.data == x)
     assert T(1) == 1
     assert not (T(1) == 2)
     assert T(1) != 2
@@ -90,15 +105,30 @@ def test_overload_ordering(T):
     assert T(1) < 2
 
 
-def test_generic_relations_work_for_non_generic_types(T):
+#
+# Generic operators
+#
+def test_generic_operators_work_for_non_generic_types():
+    assert add(1, 1) == 2
+    assert add(1.0, 1) == 2
+    assert sub(1, 1) == 0
+    assert sub(1.0, 1) == 0
+    assert mul(1, 1) == 1
+    assert mul(1.0, 1) == 1
+    assert div(1, 1) == 1
+    assert div(1.0, 1) == 1
+
+
+def test_generic_relations_work_for_non_generic_types():
     assert eq(1, 1) and not ne(1, 1)
     assert le(1, 1) and lt(1, 2)
     assert ge(1, 1) and gt(2, 1)
     assert ne(1, 2) and not eq(2, 1)
 
-#
-# Regressions
-#
+
+
+
 if __name__ == '__main__':
-    pytest.main('test_operator.py -q --tb=native')
+    #pytest.main('test_operator.py -q --tb=native')
+    pytest.main('test_operator.py -q')
     #pytest.main('test_operator.py -q')

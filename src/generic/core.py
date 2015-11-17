@@ -1,35 +1,7 @@
-'''
-=======================================
-Generic functions and multiple dispatch
-=======================================
+"""
+Implements a generic function with type dispatch
+"""
 
-Example
--------
-
->>> @generic
-... def f(x, y):
-...     return x + y + 3.14
-
-Python 3
-
->>> @overload(f)                                               # doctest: +SKIP
-... def f(x:int, y:int):
-...     return x + y + 3
-
-
-Python 2 and 3
-
->>> @f.overload([int, int])
-... def f(x, y):
-...     return x + y + 3
-
-
->>> f(0, 0)
-3
->>> f(0.0, 0.0)
-3.14
-
-'''
 import sys
 import six
 import inspect
@@ -51,9 +23,9 @@ except ImportError:
 
 class Generic(_generic_base):
 
-    '''A generic function is a collection of different implementations or
+    """A generic function is a collection of different implementations or
     "methods" under the same name, usually sharing a similar interface. When
-    the generic function object is called, the concrete method is choosen at
+    the generic function object is called, the concrete method is chosen at
     runtime from the types of the arguments passed to the generic function
     object.
 
@@ -64,7 +36,7 @@ class Generic(_generic_base):
     exposed as a mapping between a tuples of types to python functions.
 
 
-    '''
+    """
 
     def __init__(self, name, doc=None, validate=False):
         super(Generic, self).__init__()
@@ -94,7 +66,7 @@ class Generic(_generic_base):
         return '<generic function %(name)s() with %(size)s methods>' % locals()
 
     def __get__(self, instance, cls=None):
-        '''Makes it work as a method'''
+        """Makes it work as a method"""
 
         raise NotImplementedError
 
@@ -196,23 +168,23 @@ class Generic(_generic_base):
     # API
     #
     def cache(self):
-        '''Return a mapping proxy for the type cache'''
+        """Return a mapping proxy for the type cache"""
         
         return mappingproxy(self._cache)
     
     def registry(self):
-        '''Return a proxy with all types explicitly registered for the generic
-        function'''
+        """Return a proxy with all types explicitly registered for the generic
+        function"""
         
         #TODO: make single dispatch also map from single type to implementation
         # as in singledispatch 
         return mappingproxy(self)
     
     def dispatch(self, *argtypes):
-        '''Runs the dispatch algorithm to return the best available 
+        """Runs the dispatch algorithm to return the best available 
         implementation for the given types registered on the generic function.
         
-        Raises a TypeError if no suitable implementation is found.'''
+        Raises a TypeError if no suitable implementation is found."""
         
         registry = self._registry
         while True:
@@ -238,9 +210,9 @@ class Generic(_generic_base):
         return func
     
     def factory(self, *argtypes, level=0):
-        '''Return the factory function by searching in the dispatch list for
+        """Return the factory function by searching in the dispatch list for
         the function with the given level of priority. Does not check if the 
-        function returns NotImplemented as the factory is never executed.'''
+        function returns NotImplemented as the factory is never executed."""
         
         if level == 0:
             factory, _ = dispatch(argtypes, self._registry)
@@ -255,8 +227,8 @@ class Generic(_generic_base):
                 raise_no_methods(self, types=argtypes)
             
     def which(self, *args):
-        '''Returns the concrete method that would be used if called with the
-        given positional arguments.'''
+        """Returns the concrete method that would be used if called with the
+        given positional arguments."""
 
         types = tuple(map(type, args))
         try:
@@ -265,9 +237,9 @@ class Generic(_generic_base):
             raise TypeError('no methods for %s' % types)
     
     def register(self, *argtypes, **kwds):
-        '''Register a new implementation for the given sequence of input
+        """Register a new implementation for the given sequence of input
         types.
-        '''
+        """
         
         # Fetch keyword arguments (support Py2)
         func = kwds.pop('func', None)
@@ -300,13 +272,13 @@ class Generic(_generic_base):
             self.__doc__ = getattr(func, '__doc__', '')
 
     def _register_factory(self, argtypes, factory=None, restype=None):
-        '''Register a method factory.
+        """Register a method factory.
         
         Everytime that the dispatcher reaches a method factory, it calls
         ``factory(argtypes, restype)`` and expects to receive a function. This
         function is then registered in cache and is used in subsequent calls 
         to handle the given input types.
-        '''
+        """
         
         # Check for invalid inputs
         if argtypes is not None:
@@ -340,7 +312,7 @@ class Generic(_generic_base):
         self._cache.update(keep_cache)
 
     def overload(self, *args, **kwds):
-        '''Decorator used to register method overloads'''
+        """Decorator used to register method overloads"""
 
         # Decorator form: function is not the first argument
         if len(args) == 0 or not callable(args[0]):
@@ -389,8 +361,8 @@ class Generic(_generic_base):
     # Helper functions. Can be overloaded by sub-classes
     #
     def __self_or_func(self, func):
-        '''Return generic if new defined function is shadowing the generic name
-        or the function otherwise. Used in decorators'''
+        """Return generic if new defined function is shadowing the generic name
+        or the function otherwise. Used in decorators"""
     
         # Maybe use inspect for a more robust solution? Is it portable across 
         # python implementations 
@@ -414,7 +386,7 @@ except AttributeError:
 # Utility functions
 #
 def subtypecheck(types1, types2):
-    '''Return True if all types in the sequence types1 are subclasses of the
+    """Return True if all types in the sequence types1 are subclasses of the
     respective types in the sequence types2.
 
     The special value of None is considered to be the root type of all type
@@ -429,7 +401,7 @@ def subtypecheck(types1, types2):
 
     >>> subtypecheck((int, int), None)
     True
-    '''
+    """
 
     if types2 is None:
         return True
@@ -443,10 +415,10 @@ def subtypecheck(types1, types2):
 
 
 def dispatch(T, L):
-    '''Dispatch algorithm.
+    """Dispatch algorithm.
     
     Return S in L where S is the most specialized signature for which 
-    subtypecheck(T, S) is valid.'''
+    subtypecheck(T, S) is valid."""
     
     subclass = subtypecheck
     parents = [S for S in L if subclass(T, S)]
@@ -466,21 +438,21 @@ def dispatch(T, L):
         raise KeyError(T)
 
 def subtypes(T, D):
-    '''Return all entries in D that are subtypes of T, i.e., aresubtypes(t_i, T)'''
+    """Return all entries in D that are subtypes of T, i.e., aresubtypes(t_i, T)"""
     
     subclass = subtypecheck
     return [S for S in D if subclass(S, T)]
 
 
 def supertypes(T, D):
-    '''Return all entries in D that are supertypes of T, i.e., aresubtypes(T, t_i)'''
+    """Return all entries in D that are supertypes of T, i.e., aresubtypes(T, t_i)"""
     
     subclass = subtypecheck
     return [S for S in D if subclass(T, S)]
 
 
 def generic(func=None, **kwds):
-    '''Decorator used to define a generic function'''
+    """Decorator used to define a generic function"""
 
     # Transforms to decorator
     if func is None and kwds:
@@ -495,7 +467,7 @@ def generic(func=None, **kwds):
 
 
 def inspect_signature(func):
-    '''Return dispatch conditions from func's argument annotations'''
+    """Return dispatch conditions from func's argument annotations"""
 
     try:
         if six.PY2:
@@ -532,15 +504,15 @@ def inspect_signature(func):
 
 
 def is_fallback_signature(func):
-    '''Inspect function arguments and return True if it should be
-    considered a fallback implementation.'''
+    """Inspect function arguments and return True if it should be
+    considered a fallback implementation."""
 
     # Todo: signatures that have *args are fallback
     return False
 
 
 def overload(genericfunc, *args, **kwds):
-    '''Decorator used to define an overload for a generic function.
+    """Decorator used to define an overload for a generic function.
 
     Example
     -------
@@ -582,7 +554,7 @@ def overload(genericfunc, *args, **kwds):
     3
     >>> foo(1, 1.0), foo(1.0, 1)
     (2.5, 2.5)
-    '''
+    """
 
     if not isinstance(genericfunc, Generic):
         raise TypeError('callable must be created with the @generic '
@@ -594,7 +566,7 @@ def overload(genericfunc, *args, **kwds):
 
 
 class mappingproxy(Mapping):
-    '''A read-only proxy to a mapping'''
+    """A read-only proxy to a mapping"""
     
     def __init__(self, mapping):
         self.__mapping = mapping
@@ -613,13 +585,13 @@ class mappingproxy(Mapping):
 # Standard meta-factory functions
 #
 def _simple_factory(func, argtypes, restype):
-    '''The most simple builder: return the function unchanged'''
+    """The most simple builder: return the function unchanged"""
     
     return func
 
 
 def _restype_checker_factory(func, argtypes, restype):
-    '''Simply check if the return type is correct'''
+    """Simply check if the return type is correct"""
 
     if restype is None:
         return func
@@ -635,18 +607,18 @@ def _restype_checker_factory(func, argtypes, restype):
 
     
 def _strict_check_factory(func, argtypes, restype):
-    '''Check if all input/output types are *exactly* the same as declared.
+    """Check if all input/output types are *exactly* the same as declared.
     
-    Raise type errors with subclasses.'''
+    Raise type errors with subclasses."""
     
     return _instance_check_factory(func, argtypes, restype, 
                                    instancecheck=lambda x, y: x is y) 
 
 
 def _instance_check_factory(func, argtypes, restype, instancecheck=isinstance):
-    '''Check if all input/output types are the same as declared.
+    """Check if all input/output types are the same as declared.
     
-    Subclasses are also allowed.'''
+    Subclasses are also allowed."""
     
     N = len(argtypes)
     

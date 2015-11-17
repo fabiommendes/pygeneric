@@ -2,15 +2,12 @@ import pytest
 from generic import generic
 
 
-def mk(out):
-    '''Make a generic function to test dispatch'''
-    
-    def teller(*args):
-        return out
-    return teller
-
-
 def register(generic,  *types):
+    def mk(out):
+        def teller(*args):
+            return out
+        return teller
+
     out = types if len(types) != 1 else types[0]
     generic.register(*types, func=mk(out))
 

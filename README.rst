@@ -1,3 +1,10 @@
+========
+Overview
+========
+
+What is pygeneric?
+==================
+
 `pygeneric` implements generic functions with type dispatch in Python. A generic
 function groups different implementations (or methods) under the same name.
 The actual implementation is then chosen at runtime depending on the function
@@ -5,16 +12,20 @@ arguments.
 
 The implementation is loosely inspired in the Julia language. We also shamelessly
 steal some other features of Julia and adapted them to Python:
-    * Parametric types.
-    * A type conversion/promotion system integrated with arithmetic operations.
-    * A generic Object base class that delegates all binary operations to the
-      corresponding generic functions (i.e., instead of implementing
-      Object.__add__, we overload add(Object, Object)).
+
+* Parametric types.
+* A type conversion/promotion system integrated with arithmetic operations.
+* A generic Object base class that delegates all binary operations to the
+  corresponding generic functions (i.e., instead of implementing
+  Object.__add__, we overload add(Object, Object)).
 
 This package works with Python 3 and Python 2, but it is getting increasingly
 more difficult to keep Python 2 support as we implement more advanced features.
-We would love to let it go of Python 2, so please tell us if you use this package
-in Python 2.
+Not all functionality works in Python 2, and sometimes some extra precautions
+are necessary. Pygeneric cannot handle old style classes properly, no never
+throw "instance" objects at it! In the small places in which Python 2 and Python
+3 behavior diverges, sometimes we have to replicate Python 3 behavior even when
+executing in the Python 2 interpreter.
 
 
 Basic usage
@@ -58,6 +69,8 @@ argument types.
 
 Consider the two specialized dispatches
 
+::
+
     @func.dispatch
     def func(x: Integral, y: Number):
         print('Got one integer: %r and %y' % (x, y))
@@ -66,7 +79,7 @@ Consider the two specialized dispatches
     def func(x: Integral, y: Integral):
        print('Got two integers: %r and %y' % (x, y))
 
-It knows what to do::
+``pygeneric`` knows what to do::
 
     >>> func(1, 2)
     Got two integers: 1 and 2
