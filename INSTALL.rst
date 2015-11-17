@@ -3,7 +3,11 @@ Dependencies
 
 `pygeneric` can run in many Python implementations including CPython and 
 PyPy. In CPython it can be installed as a (slower) pure-python version or it
-can use a Cython compiled extensions to speed-up things in C. 
+can use a Cython compiled extensions to speed-up things in C.
+
+Don't be alarmed if you are running an unoptimized code: these speed benefits
+are negligible unless you are dispatching to very simple functions that are
+called many times in tight loops.
 
 
 Installation commands

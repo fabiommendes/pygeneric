@@ -208,7 +208,7 @@ class Generic(_generic_base):
         # as in singledispatch 
         return mappingproxy(self)
     
-    def dispatch(self, *types):
+    def dispatch(self, *argtypes):
         '''Runs the dispatch algorithm to return the best available 
         implementation for the given types registered on the generic function.
         
@@ -216,16 +216,16 @@ class Generic(_generic_base):
         
         registry = self._registry
         while True:
-            T = dispatch(types, registry)
+            T = dispatch(argtypes, registry)
             wrapped = registry[T]
     
             # The None root is always present. It is assigned to None if no
             # fallback function is available
             if wrapped is None:
-                raise_no_methods(self, types=types)
+                raise_no_methods(self, types=argtypes)
     
             factory, restype = wrapped
-            implementation = factory(types, restype)
+            implementation = factory(argtypes, restype)
             
             if implementation is NotImplemented:
                 if registry is self._registry:
@@ -234,9 +234,26 @@ class Generic(_generic_base):
                 continue
             break
                 
-        func = self._cache[types] = implementation
+        func = self._cache[argtypes] = implementation
         return func
-
+    
+    def factory(self, *argtypes, level=0):
+        '''Return the factory function by searching in the dispatch list for
+        the function with the given level of priority. Does not check if the 
+        function returns NotImplemented as the factory is never executed.'''
+        
+        if level == 0:
+            factory, _ = dispatch(argtypes, self._registry)
+            return factory
+        
+        registry = dict(self._registry)
+        for _ in range(level + 1):
+            try:
+                factory, _ = dispatch(argtypes, registry)
+                return factory
+            except TypeError: # Found the None root type
+                raise_no_methods(self, types=argtypes)
+            
     def which(self, *args):
         '''Returns the concrete method that would be used if called with the
         given positional arguments.'''
@@ -255,6 +272,8 @@ class Generic(_generic_base):
         # Fetch keyword arguments (support Py2)
         func = kwds.pop('func', None)
         restype = kwds.pop('restype', None)
+        is_factory = kwds.pop('factory', False)
+        
         if kwds:
             arg = kwds.popitem()[0]
             raise TypeError('invalid keyword argument: %s' % arg)
@@ -262,17 +281,63 @@ class Generic(_generic_base):
         # We don't use the restype for now. Maybe in the future? Ideas?
         if func is None:
             def decorator(func):
-                self.register(*argtypes, func=func)
+                self.register(*argtypes, 
+                              func=func, factory=is_factory, restype=restype)
                 return self.__self_or_func(func)
             return decorator
+
+        # Register directly as factory
+        if is_factory:
+            return self._register_factory(argtypes, 
+                              factory=func, restype=restype)
         
         # Register factory in the internal dictionary
         wrapped = functools.partial(_simple_factory, func) 
-        self.factory(*argtypes, func=wrapped, restype=restype)
+        self._register_factory(argtypes, factory=wrapped, restype=restype)
         
         # Update documentation, if empty
         if not self.__doc__:
             self.__doc__ = getattr(func, '__doc__', '')
+
+    def _register_factory(self, argtypes, factory=None, restype=None):
+        '''Register a method factory.
+        
+        Everytime that the dispatcher reaches a method factory, it calls
+        ``factory(argtypes, restype)`` and expects to receive a function. This
+        function is then registered in cache and is used in subsequent calls 
+        to handle the given input types.
+        '''
+        
+        # Check for invalid inputs
+        if argtypes is not None:
+            if not all(isinstance(T, type) for T in argtypes):
+                argtypes = str(argtypes)
+                raise ValueError('must be a tuple of types, got %s' % argtypes)
+        if not isinstance(restype, (type, type(None))):
+            tname = type(restype).__name__
+            raise ValueError('return type must be a type, got %s' % tname)
+
+        # Prevent overwriting old values
+        if argtypes in self._registry:
+            types_repr = ', '.join(T.__name__ for T in argtypes)
+            name = self.name
+            msg = 'method %s(%s) is already defined' % (name, types_repr)
+            raise TypeError(msg)
+
+        # Add keys and update cache
+        if self._validate is not None:
+            self._validate(argtypes, restype)
+        
+        self._registry[argtypes] = (factory, restype)
+        #subkeys = subtypes(argtypes, self._registry)
+        #for k in list(self._cache):
+        #    if subtypecheck(k, argtypes):
+        #        if not any(subtypecheck(k, K) for K in subkeys):
+        #           del self._cache[k]
+        registry = self._registry
+        keep_cache = {T: f for (T, f) in self._cache if T in registry}
+        self._cache.clear()
+        self._cache.update(keep_cache)
 
     def overload(self, *args, **kwds):
         '''Decorator used to register method overloads'''
@@ -319,57 +384,7 @@ class Generic(_generic_base):
         else:
             return func
 
-    def factory(self, *argtypes, **kwds):
-        '''Register a method factory.
-        
-        Everytime that the dispatcher reaches a method factory, it calls
-        ``factory(argtypes, restype)`` and expects to receive a function. This
-        function is then registered in cache and is used in subsequent calls 
-        to handle the given input types.
-        '''
-        
-        # Fetch keyword arguments (support Py2)
-        func = kwds.pop('func', None)
-        restype = kwds.pop('restype', None)
-        if kwds:
-            arg = kwds.popitem()[0]
-            raise TypeError('invalid keyword argument: %s' % arg)
-        
-        # Call function in decorator form
-        if func is None:
-            def decorator(func):
-                self.factory(*argtypes, func=func, restype=restype)
-                return func
-            return decorator
-        
-        # Check for invalid inputs
-        if argtypes is not None:
-            if not all(isinstance(T, type) for T in argtypes):
-                argtypes = str(argtypes)
-                raise ValueError('must be a tuple of types, got %s' % argtypes)
-        if not isinstance(restype, (type, type(None))):
-            tname = type(restype).__name__
-            raise ValueError('return type must be a type, got %s' % tname)
-
-        # Prevent overwriting old values
-        if argtypes in self._registry:
-            types_repr = ', '.join(T.__name__ for T in argtypes)
-            name = self.name
-            msg = 'method %s(%s) is already defined' % (name, types_repr)
-            raise TypeError(msg)
-
-        # Add keys and update cache
-        if self._validate is not None:
-            self._validate(argtypes, restype)
-        
-        self._registry[argtypes] = (func, restype)
-        self._registry[argtypes] = (func, restype)
-        subkeys = subtypes(argtypes, self._registry)
-        for k in list(self._cache):
-            if subtypecheck(k, argtypes):
-                if not any(subtypecheck(k, K) for K in subkeys):
-                    del self._cache[k]
-
+    
     #
     # Helper functions. Can be overloaded by sub-classes
     #
@@ -437,7 +452,7 @@ def dispatch(T, L):
     parents = [S for S in L if subclass(T, S)]
     
     for _ in range(len(parents)):
-        if len(parents) <= 1:
+        if len(parents) == 1:
             break
         else:
             X, *tail = parents
@@ -445,6 +460,7 @@ def dispatch(T, L):
             parents.append(X)
 
     if parents:
+        #assert len(parents) == 1
         return parents[0]
     else:
         raise KeyError(T)

@@ -1,6 +1,5 @@
 import pytest
-from generic.op import * 
-
+from generic.op import Object, add, sub, mul, div, eq, ne, gt, lt, ge, le 
 #
 # Fixtures
 #

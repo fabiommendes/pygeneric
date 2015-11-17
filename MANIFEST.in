@@ -1,4 +1,4 @@
-include INSTALL.txt
-include README.txt
+include INSTALL.rst
+include README.rst
 include VERSION
 recursive-include py2src *.py

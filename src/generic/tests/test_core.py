@@ -119,7 +119,7 @@ if six.PY3:
 
 
 def test_factory(addfunc):
-    @addfunc.factory(int, int, object)
+    @addfunc.register(int, int, object, factory=True)
     def factory(argtypes, restype):
         delta = 0.5 if argtypes[-1] is float else 0
         def func(x, y, z):
@@ -166,4 +166,4 @@ def test_memory_leaks(addfunc):
     
 if __name__ == '__main__':
     #pytest.main('test_core.py -q --tb=native')
-    pytest.main('test_core.py -q --capture=no')
+    pytest.main('test_core.py -q --capture=no --tb=native')

@@ -1,11 +1,10 @@
-'''
 ==========================
 Conversions and Promotions
 ==========================
 
 This module introduces a system for converting objects to different types
 and for promoting arguments of mathematical operations to a common type that is
-similar to the same concepts in the Julia language.
+similar to the same concepts found in the Julia language.
 
 
 Conversions
@@ -23,8 +22,8 @@ objects between different types. The convert function is called as
     (42+0j)
 
 The conversion is not guaranteed to succeed. The user may give an argument and
-a type for which there are no known conversions and even when there is a known
-conversion for some specific type it may fail for specific values.
+a type for which there are no known conversions. Even when there is a known
+conversion for some specific type, it may fail for specific values.
 
     >>> convert('42', float)
     Traceback (most recent call last):
@@ -41,9 +40,9 @@ The user may specify custom conversions using the :func:`set_conversion`
 decorator. This function is designed to be used with user defined types and one
 cannot override an existing conversion.
 
-Similarly, the :func:`get_conversion(T1, T2)` function returns the conversion
-function registered for the two given types (or raises a TypeError, if the
-conversion does not exist).
+Similarly, :func:`get_conversion(T1, T2)` returns the conversion function
+registered for the two given types (or raises a TypeError, if the conversion
+does not exist).
 
 
 Promotion
@@ -51,10 +50,10 @@ Promotion
 
 Many mathematical functions of two or more arguments implicitly expect that the
 arguments are of the same type. When one asks for something such as ``41 +
-1.0``, the first argument is converted under the hood to float before doing the
-summation. In most cases, Python makes these conversions automatically.
-However, when dealing with multiple dispatch function, one often has to perform
-then explicitly.
+1.0``, the first argument is automatically converted to float before doing the
+actual summation in the CPU. In most cases, Python makes these conversions
+automatically. However, when dealing with multiple dispatch functions, one often
+has to be explicit.
 
 The promotion mechanism provides a way automate most of these conversions by
 trying to find a suitable common type for a tuple of mixed types. Take the
@@ -69,18 +68,20 @@ The real implementation is slightly more complicated since it has to prevent
 an infinite recursion when the fallback does not exist.
 
 The rationale behind type promotions is that two numeric types should always
-try to promote to a common type able to represent most of the values from both
-types. This may happen only "approximatelly" such as in the case of int to
-float conversions or may be strictly guaranteed for, e.g., promotions of
-integer types with different bit widths.
+try to promote to a common type that is able to represent most of the values
+from both types. This may happen only "optimistically/approximately" such as in
+the case of int to float conversions or promotions of integer types with
+different bit widths.
 
 We try to follow these rules:
     1) Numerical types which differ only by bitwidth should be converted to
-       highest bitwidth
+       highest bitwidth. (This is not an issue with Python's builtin numerical
+       types, since int's have arbitrary precision).
     2) Signed integers with unsigned integers should be converted to signed
-       integers of the highest bitwidth
-    3) Floats and integers are always converted to floats
-    4) Reals and complexes are always converted to complexes
+       integers and use the highest bitwidth. Some unsigned values can result in
+       failed promotions.
+    3) Floats and integers are always promoted to floats.
+    4) Reals and complexes are always promoted to complexes.
 
 
 Defining custom promotions
@@ -98,8 +99,8 @@ Notice that the reciprocal (int, float) --> float does not need to be
 explicitly defined.
 
 The :func:`set_promotion` may be required for more complicated promotions which
-involves operations more complicated than simple conversions. The previous
-rule could be re-written as
+involves operations other than simple conversions. The previous rule could be
+re-written as
 
     >>> @set_promotion(float, int, outtype=float)              # doctest: +SKIP
     ... def promote_float_int(x, y):
@@ -109,9 +110,3 @@ rule could be re-written as
 Here we can assume that the argument types will appear in the given order and
 the promotion mechanism automatically creates the function with swapped
 arguments.
-
-'''
-
-from .conversion import *
-from .promotion import *
-from . import rules as _rules

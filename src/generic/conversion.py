@@ -1,18 +1,118 @@
-'''
-Define the promote() function and friends.
-'''
+"""
+Conversion and promotion between types.
+"""
 
-from . import get_conversion
+from .errors import InexactError
+__all__ = [
+    # Conversions
+    'convert', 'get_conversion', 'set_conversion',
 
+    # Promotions
+    'promote', 'get_promotion', 'set_promotion', 'set_promotion_rule',
+    'promote_type',
+]
+
+
+#
+# Define the convert() function and friends.
+#
+CONVERT_FUNCTIONS = {}
+
+
+def _do_nothing(x):
+    """A function that does nothing and returns its argument"""
+
+    return x
+
+
+def convert(value, T):
+    """Convert value to the given type.
+
+    It raises a TypeError if no conversion is possible and a ValueError if
+    conversion is possible in general, but not for the specific value given.
+
+    Example
+    -------
+
+    >>> convert(42, float)
+    42.0
+    >>> convert('42', float)
+    Traceback (most recent call last):
+    ...
+    TypeError: cannot convert 'str' to 'float'
+
+    """
+
+    if value.__class__ is T:
+        return value
+
+    try:
+        converter = get_conversion(value.__class__, T)
+        return converter(value)
+    except ValueError:
+        if isinstance(value, T):
+            return value
+        raise
+
+
+def get_conversion(from_type, to_type):
+    """Return a function that converts from input type to the given output
+    type"""
+
+    # Look up in dictionary
+    try:
+        return CONVERT_FUNCTIONS[from_type, to_type]
+    except KeyError:
+        try:
+            if issubclass(to_type, from_type):
+                return _do_nothing
+        except TypeError:
+            raise TypeError('not types: %r, %r' % (from_type, to_type))
+
+    # Handle key error
+    if not (isinstance(from_type, type) and isinstance(to_type, type)):
+        fmt = type(from_type).__name__, type(to_type).__name__
+        raise ValueError('expect types, got: (%s, %s)' % fmt)
+    fmt = from_type.__name__, to_type.__name__
+    msg = "cannot convert '%s' to '%s'" % fmt
+    raise TypeError(msg)
+
+
+def set_conversion(from_type, to_type, function=None):
+    """Register a function that converts between the two given types.
+
+    Can be used as a decorator as in::
+
+        @set_conversion(int, float)
+        def int_to_float(x):
+            return float(x)
+
+    """
+
+    # Decorator form
+    if function is None:
+        def decorator(func):
+            set_conversion(from_type, to_type, func)
+            return func
+        return decorator
+
+    # Forbid redefinitions
+    if (from_type, to_type) in CONVERT_FUNCTIONS:
+        fmt = from_type.__name__, to_type.__name__
+        raise ValueError('cannot overwrite convertion from %s to %s' % fmt)
+
+    CONVERT_FUNCTIONS[from_type, to_type] = function
+
+
+#
+# Define the promote() function and friends.
+#
 PROMOTION_FUNCTIONS = {}
 PROMOTION_RULES = {}
 
-__all__ = ['promote', 'get_promotion', 'set_promotion', 'set_promotion_rule',
-           'promote_type']
-
 
 def promote(x, y, *args):
-    '''Promote x and y to a common type.
+    """Promote x and y to a common type.
 
     Example
     -------
@@ -21,7 +121,7 @@ def promote(x, y, *args):
     (1.0, 3.14)
     >>> promote(1, 2, 3.0)
     (1.0, 2.0, 3.0)
-    '''
+    """
 
     if args:
         return _promote_values(x, y, *args)
@@ -42,14 +142,14 @@ def promote(x, y, *args):
 
 
 def _promote_values(*args):
-    '''Return a promotion of many elements to the most generic type
+    """Return a promotion of many elements to the most generic type
 
     Example
     -------
 
     >>> _promote_values(1, 2, 3.0)
     (1.0, 2.0, 3.0)
-    '''
+    """
 
     elements = iter(args)
     out = [next(elements)]
@@ -70,10 +170,10 @@ def _promote_values(*args):
 
 
 def get_promotion(T1, T2):
-    '''Return a function f(x, y) that returns a tuple (X, Y) with the promoted
+    """Return a function f(x, y) that returns a tuple (X, Y) with the promoted
     versions of x and y. Both outputs X and Y have the same value.
 
-    Raises a TypeError if no promotion function is found'''
+    Raises a TypeError if no promotion function is found"""
 
     # Check the promotions dictionary
     try:
@@ -110,7 +210,7 @@ def get_promotion(T1, T2):
 
 def set_promotion(T1, T2, function=None, symmetric=True,
                   outtype=None):
-    '''Define the promotion rule for the pair of types (T1, T2).
+    """Define the promotion rule for the pair of types (T1, T2).
 
     It is usually more convenient to use the set_promotion_rule() function.
     Otherwise the user must take care of the order of arguments and manual
@@ -132,7 +232,7 @@ def set_promotion(T1, T2, function=None, symmetric=True,
         argument values. This optional parameters tells the expected output
         type for the given promotion. This information may be useful by other
         functions in order to make stronger assumptions about promotions.
-    '''
+    """
 
     # Decorator form
     if function is None:
@@ -158,11 +258,11 @@ def set_promotion(T1, T2, function=None, symmetric=True,
 
 
 def set_promotion_rule(T1, T2, T3):
-    '''Set the simple promotion rule for when the promotion from type T1 with
+    """Set the simple promotion rule for when the promotion from type T1 with
     type T2 is a simple convertion to type T3.
 
     Usually T3 is one of T1 or T2, but this is not necessary. The user does
-    not have to specify the symmetric promotion (T2, T1) to T3.'''
+    not have to specify the symmetric promotion (T2, T1) to T3."""
 
     # Check types
     if (T1, T2) in PROMOTION_FUNCTIONS or (T2, T1) in PROMOTION_FUNCTIONS:
@@ -213,7 +313,7 @@ def set_promotion_rule(T1, T2, T3):
 
 
 def promote_type(T1, T2):
-    '''Return the output type for the promotion rule with types T1 and T2'''
+    """Return the output type for the promotion rule with types T1 and T2"""
 
     try:
         return PROMOTION_RULES[T1, T2]
@@ -225,3 +325,40 @@ def promote_type(T1, T2):
         else:
             fmt = T1.__name__, T2.__name__
             raise TypeError('no promotion rule for (%s, %s)' % fmt)
+
+
+#
+# Conversion rules
+#
+set_conversion(int, float, float)
+set_conversion(int, complex, complex)
+set_conversion(float, complex, complex)
+
+
+@set_conversion(float, bool)
+@set_conversion(int, bool)
+@set_conversion(complex, bool)
+def number2bool(x):
+    if x == 0:
+        return False
+    elif x == 1:
+        return True
+    else:
+        raise InexactError(x)
+
+
+@set_conversion(complex, int)
+@set_conversion(float, int)
+def number2int(x):
+    out = int(x)
+    if out == x:
+        return out
+    else:
+        raise InexactError(x)
+
+#
+# Promotion rules
+#
+set_promotion_rule(int, float, float)
+set_promotion_rule(int, complex, complex)
+set_promotion_rule(float, complex, complex)

@@ -1,8 +1,8 @@
-'''
+"""
 Base types for objects that delegate implementations of operations and 
 relations to generic functions.
-'''
-import operator
+"""
+import abc
 from . import generic
 from .util import raise_no_methods, raise_unordered
 
@@ -20,11 +20,11 @@ __all__ = [
 
 class Object(object):
 
-    '''Base class for types that dispatch all special operations such as 
+    """Base class for types that dispatch all special operations such as 
     arithmetic operations, comparisons, etc to the functions defined in this 
     module. These fuctions can be overriden by subclasses, but subclass authors 
     must be carefull to keep the same semantics as if the magic functions 
-    would only dispatch to the corresponding generic.'''
+    would only dispatch to the corresponding generic."""
 
     __slots__ = ()
 
@@ -60,15 +60,69 @@ class Object(object):
 
     def __rfloordiv__(self, other):
         return floordiv(other, self)
-    
+
+    def __mod__(self, other):
+        return mod(self, other)
+
+    def __rmod__(self, other):
+        return mod(other, self)
+
+    def __divmod__(self, other):
+        return divmod(self, other)
+
+    def __rdivmod__(self, other):
+        return divmod(other, self)
+
+    def __matmul__(self, other):
+        return matmul(self, other)
+
+    def __rmatmul__(self, other):
+        return matmul(other, self)
+
+    def __pow__(self, other, mod=None):
+        if mod is None:
+            return pow(self, other)
+        else:
+            return pow(self, other, mod)
+
+    def __rpow__(self, other, mod=None):
+        if mod is None:
+            return pow(other, self)
+        else:
+            return pow(other, self, mod)
+
+    #
+    # Bitwise
+    #
+    def __and__(self, other):
+        return and_(self, other)
+
+    def __rand__(self, other):
+        return and_(other, self)
+
+    def __or__(self, other):
+        return or_(self, other)
+
+    def __ror__(self, other):
+        return or_(other, self)
+
+    def __rshift__(self, other):
+        return rshift(self, other)
+
+    def __rrshift__(self, other):
+        return rshift(other, self)
+
+    def __lshift__(self, other):
+        return lshift(self, other)
+
+    def __rlshift__(self, other):
+        return lshift(other, self)
+
     #
     # Relational operators
     #
     def __eq__(self, other):
         return eq(self, other)
-    
-    def __eqsame__(self, other):
-        return self is other
     
     def __gt__(self, other):
         return gt(self, other)
@@ -76,24 +130,36 @@ class Object(object):
     def __lt__(self, other):
         return gt(other, self)
 
-    # Fallback methods for ordering relations. The user must defined them
-    # to specify a concrete ordering between types
-    def __gtsame__(self, other):
-        raise_unordered(self, other)
+    def __ge__(self, other):
+        return gt(self, other)
+
+    def __le__(self, other):
+        return gt(other, self)
 
     #
     # Maybe implement other python protocols
     #
     #... in the future ...
     
-    
+
+class TotalOrdered(metaclass=abc.ABCMeta):
+    """Abstract class for all types that obbey a total ordering relation.
+
+    Can register objects a posteriori or inherit from this in order to enable
+    a total ordering for the gt, lt, le, ge operators. It is recommended that
+    TotalOrdered subclasses implement only the eq and gt relations."""
+
+TotalOrdered.register(int)
+TotalOrdered.register(float)
+
+
 #
 # Utility functions (maybe some of them are useful enough to go to 
 # pygeneric.util)
 #
 def _opsame_meta_factory(opname):
-    '''Returns a factory tha can be used to test if the object implements a 
-    __<opname>same__() method'''
+    """Returns a factory tha can be used to test if the object implements a 
+    __<opname>same__() method"""
     
     samemethod = '__%ssame__' % opname
 
@@ -114,31 +180,38 @@ def _opsame_meta_factory(opname):
 # really similar.
 #
 def _arithmetic_op_factory(opname):
-    '''Creates a generic arithmetic operator with the given name'''
+    """Creates a generic arithmetic operator with the given name"""
     
     method = '__%s__' % opname
     rmethod = '__r%s__' % opname
     
     @generic
     def op(x, y):
-        if isinstance(x, Object):
-            raise_no_methods(op, args=(x, y))
-        
-        # Try the direct x.__op__(y) method. If it succeeds, we return. 
-        # It could fail with an AttributeError or returning NotImplemented.
-        out =  getattr(x, method, lambda y: NotImplemented)(y)
-        if out is not NotImplemented:
-            return out
-        
-        # If the direct call fails, try y.__rop__(x)
-        if isinstance(y, Object):
-            raise_no_methods(op, args=(x, y))
+        out = getattr(x, method, lambda y: NotImplemented)(y)
+        if out is NotImplemented:
+            try:
+                return getattr(y, rmethod)(x)
+            except AttributeError:
+                raise_no_methods(op, args=(x, y))
+        return out
+
+    @op.register(Object, object)
+    def op_first(x, y):
         try:
-            return getattr(y, rmethod)(x)
+            method = getattr(y, rmethod)
         except AttributeError:
             raise_no_methods(op, args=(x, y))
-            
-    op.factory(Object, Object, func=_opsame_meta_factory(opname))    
+        else:
+            return method(x)
+
+    @op.register(object, Object)
+    def op_second(x, y):
+        out = getattr(x, method, lambda y: NotImplemented)(y)
+        if out is NotImplemented:
+            raise_no_methods(op, args=(x, y))
+        return out
+
+    op.register(Object, Object, func=_opsame_meta_factory(opname), factory=True)
     op.__name__ = opname 
     return op
 
@@ -147,25 +220,110 @@ sub = _arithmetic_op_factory('sub')
 mul = _arithmetic_op_factory('mul')
 div = truediv = _arithmetic_op_factory('truediv')
 floordiv = _arithmetic_op_factory('floordiv')
+mod = _arithmetic_op_factory('mod')
+matmul = _arithmetic_op_factory('matmul')
+pow = _arithmetic_op_factory('pow')
+and_ = _arithmetic_op_factory('and_')
+or_ = _arithmetic_op_factory('or_')
+rshift = _arithmetic_op_factory('rshift')
+lshift = _arithmetic_op_factory('lshift')
 
 
 #
-# Binary relations are simple enough that we do not need an specialized factory
+# Binary relations
 #
-# We start with a baseline
-eq = generic(operator.eq)
-gt = generic(operator.gt)
+@generic
+def eq(x, y):
+    out = x.__eq__(y)
+    if out is NotImplemented:
+        out = y.__eq__(x)
+    if out is NotImplemented:
+        return x is y
+    return out
 
-# Non-overloadables: in the future we should add a freeze() method to generic
-# functions and create a frozen operator in order to keep the API consistent
-# Ideally there should be an error message telling which operator should be
-# overriden.  
-ne = operator.ne
-ge = operator.ge
-le = operator.le
-lt = operator.lt 
+eq.register(Object, Object, func=_opsame_meta_factory('eq'), factory=True)
 
-# Make overrides for (Object, Object) calls
-eq.factory(Object, Object, func=_opsame_meta_factory('eq'))
-gt.factory(Object, Object, func=_opsame_meta_factory('gt'))
-    
+
+@generic
+def ne(x, y):
+    out = x.__ne__(y)
+    if out is NotImplemented:
+        out = y.__ne__(x)
+    if out is NotImplemented:
+        return False
+    return not (x == y)
+
+ne.register(Object, Object, func=_opsame_meta_factory('ne'), factory=True)
+
+
+def _relational_op_factory(opname, ropname):
+    """Creates a generic arithmetic operator with the given name"""
+
+    method = '__%s__' % opname
+    rmethod = '__%s__' % ropname
+
+    @generic
+    def op(x, y):
+        out = getattr(x, method, lambda y: NotImplemented)(y)
+        if out is NotImplemented:
+            try:
+                return getattr(y, rmethod)(x)
+            except AttributeError:
+                raise_unordered(op, args=(x, y))
+        raise_no_methods(op, args=(x, y))
+
+    @op.register(Object, object)
+    def op_first(x, y):
+        try:
+            method = getattr(y, rmethod)
+        except AttributeError:
+            raise_unordered(op, args=(x, y))
+        else:
+            return method(x)
+
+    @op.register(object, Object)
+    def op_second(x, y):
+        out = getattr(x, method, lambda y: NotImplemented)(y)
+        if out is NotImplemented:
+            raise_unordered(op, args=(x, y))
+        return out
+
+    op.register(Object, Object, func=_opsame_meta_factory(opname), factory=True)
+    op.__name__ = opname
+    return op
+
+gt = _relational_op_factory('gt', 'lt')
+ge = _relational_op_factory('ge', 'le')
+lt = _relational_op_factory('lt', 'gt')
+le = _relational_op_factory('le', 'ge')
+
+
+#
+# Total ordering relations
+#
+@gt.register(TotalOrdered, TotalOrdered)
+def gt(x, y):
+    try:
+        out = x.__gt__(y)
+    except AttributeError:
+        raise RuntimeError('TotalOrdered object does not implement a __gt__ relation')
+    if out is NotImplemented:
+        out = y.__lt__(x)
+    if out is NotImplemented:
+        raise_unordered(x, y)
+    return out
+
+
+@lt.register(TotalOrdered, TotalOrdered)
+def lt(x, y):
+    return (not x > y) and x != y
+
+
+@ge.register(TotalOrdered, TotalOrdered)
+def ge(x, y):
+    return x > y or x == y
+
+
+@le.register(TotalOrdered, TotalOrdered)
+def le(x, y):
+    return x < y or x == y

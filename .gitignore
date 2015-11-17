@@ -1,5 +1,8 @@
 /build/
 /dist/
-//__pycache__/
-*.pyc
 /py2src/
+/__pycache__/
+/.idea/
+/.eggs/
+/.settings/
+/.benchmarks/
