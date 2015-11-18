@@ -4,7 +4,7 @@ relations to generic functions.
 """
 import abc
 from . import generic
-from .util import raise_no_methods, raise_unordered
+from .errors import raise_no_methods, raise_unordered
 
 
 __all__ = [
@@ -22,8 +22,8 @@ class Object(object):
 
     """Base class for types that dispatch all special operations such as 
     arithmetic operations, comparisons, etc to the functions defined in this 
-    module. These fuctions can be overriden by subclasses, but subclass authors 
-    must be carefull to keep the same semantics as if the magic functions 
+    module. These functions can be overridden by subclasses, but subclass
+    authors must be careful to keep the same semantics as if the magic functions
     would only dispatch to the corresponding generic."""
 
     __slots__ = ()

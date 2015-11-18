@@ -1,7 +1,7 @@
 """
 Conversion and promotion between types.
 """
-
+from . import ABCMeta
 from .errors import InexactError
 __all__ = [
     # Conversions
@@ -228,8 +228,8 @@ def get_promotion(T1, T2):
     return rules[valid[0]]
 
 
-def set_promotion(T1, T2, *, function=None, symmetric=True,
-                  restype=None):
+def set_promotion(T1, T2, *,
+                  function=None, symmetric=True, restype=None):
     """Define the promotion rule for the pair of types (T1, T2).
 
     It is usually more convenient to use the set_promotion_rule() function.
@@ -262,8 +262,8 @@ def set_promotion(T1, T2, *, function=None, symmetric=True,
         return decorator
 
     # Check if promotion is valid
-    if T1 is T2:
-        raise RuntimeError('cannot set a promotion rule for identical types.')
+    if T1 is T2 and not isinstance(T1, ABCMeta):
+        raise RuntimeError('cannot set a promotion rule for identical contrete types.')
     if (T1, T2) in PROMOTION_FUNCTIONS or (symmetric and (T2, T1) in PROMOTION_FUNCTIONS):
         out_name = restype.__name__ if restype else (function.__name__ + '()')
         fmt = T1.__name__, T2.__name__, out_name

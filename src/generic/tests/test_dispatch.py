@@ -1,5 +1,5 @@
 import pytest
-from generic import generic
+from generic import generic, Number, DispatchError
 
 
 def register(generic,  *types):
@@ -48,7 +48,23 @@ def test_linear_multiple_dispatch():
     assert f(A(0), B(0)) == (A, A)
     assert f(0, x) == (object, object)
 
-    
+
+def test_ambiguous_dispatch():
+    class A(int):
+        pass
+
+    @generic
+    def f(x: Number, y: Number):
+        return x + y
+
+    @f.overload
+    def f(x: A, y: object):
+        return x + y
+
+    with pytest.raises(DispatchError):
+        f(A(1), 1)
+
+
 if __name__ == '__main__':
     #pytest.main('test_dispatch.py -q --tb=native')
     pytest.main('test_dispatch.py -q')

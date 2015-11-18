@@ -7,7 +7,8 @@ import six
 import inspect
 import functools
 from collections import MutableMapping, Mapping
-from .util import raise_no_methods, tname
+from .errors import DispatchError, raise_no_methods
+from .util import tname
 
 __all__ = ['Generic', 'generic', 'overload']
 
@@ -46,6 +47,8 @@ class Generic(_generic_base):
         self._registry = {None: None}
         self._last_func = None
         self._validate = validate or None
+        self.__last_types = None
+        self.__last_method = None
 
     def __call__(self, *args, **kwds):
         types = tuple(map(type, args))
@@ -188,7 +191,7 @@ class Generic(_generic_base):
         
         registry = self._registry
         while True:
-            T = dispatch(argtypes, registry)
+            T = dispatch(argtypes, registry, fname=self.__name__)
             wrapped = registry[T]
     
             # The None root is always present. It is assigned to None if no
@@ -215,13 +218,13 @@ class Generic(_generic_base):
         function returns NotImplemented as the factory is never executed."""
         
         if level == 0:
-            factory, _ = dispatch(argtypes, self._registry)
+            factory, _ = dispatch(argtypes, self._registry, fname=self.__name__)
             return factory
         
         registry = dict(self._registry)
         for _ in range(level + 1):
             try:
-                factory, _ = dispatch(argtypes, registry)
+                factory, _ = dispatch(argtypes, registry, fname=self.__name__)
                 return factory
             except TypeError: # Found the None root type
                 raise_no_methods(self, types=argtypes)
@@ -414,7 +417,7 @@ def subtypecheck(types1, types2):
         return all(issubclass(T1, T2) for (T1, T2) in zip(types1, types2))
 
 
-def dispatch(T, L):
+def dispatch(T, L, fname='function'):
     """Dispatch algorithm.
     
     Return S in L where S is the most specialized signature for which 
@@ -432,7 +435,13 @@ def dispatch(T, L):
             parents.append(X)
 
     if parents:
-        #assert len(parents) == 1
+        if len(parents) != 1:
+            msg = 'ambiguous dispatch. Could not chose between these methods:'
+            for args in parents:
+                sig = '%s(%s)' % (fname, ', '.join(T.__name__ for T in args))
+                msg += '\n    * ' + sig
+            raise DispatchError(msg)
+
         return parents[0]
     else:
         raise KeyError(T)

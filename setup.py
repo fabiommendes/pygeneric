@@ -4,10 +4,12 @@ import sys
 import setuptools
 from setuptools import setup
 
+
 AUTHOR = 'Fábio Macêdo Mendes'
 BASE, _ = os.path.split(__file__)
 SRC = os.path.join(BASE, 'src')
 setup_kwds = dict(cmdclass={})
+
 
 #
 # Update VERSION and meta.py with meta information
@@ -25,7 +27,7 @@ with open(os.path.join(SRC, 'generic', 'meta.py'), 'w') as F:
 #
 # Choose the default Python3 branch or the code converted by 3to2
 #
-PYSRC = 'src' if sys.version.startswith('3') else 'py2src'
+PYSRC = 'src' if sys.version_info[0] == 3 else 'py2src'
 
 #
 # Test integration
@@ -109,9 +111,9 @@ in Python 2.
     package_dir={'': PYSRC},
     packages=setuptools.find_packages(PYSRC),
     license='GPL',
-    install_requires=[],
+    install_requires=['six'],
     zip_safe=False,
-    tests_require=['pytest', 'psutil', 'six'],
+    tests_require=['pytest', 'psutil'],
     setup_requires=[],
     **setup_kwds
 )
