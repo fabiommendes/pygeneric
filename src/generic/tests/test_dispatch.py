@@ -53,12 +53,12 @@ def test_ambiguous_dispatch():
     class A(int):
         pass
 
-    @generic
-    def f(x: Number, y: Number):
+    @generic([Number, Number])
+    def f(x, y):
         return x + y
 
-    @f.overload
-    def f(x: A, y: object):
+    @f.register(A, object)
+    def f(x, y):
         return x + y
 
     with pytest.raises(DispatchError):

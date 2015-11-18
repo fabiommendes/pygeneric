@@ -142,13 +142,7 @@ class Generic(_generic_base):
                 raise KeyError(types)
             
     def __delitem__(self, types):
-        raise NotImplementedError
-        del self._registry[types]
-        if len(self._cache) == len(self._registry) + 1:
-            del self._cache[types]  # Cache has the same items as self._registry
-        else:
-            self._cache.clear()
-            self._cache.update(self._registry)
+        raise RuntimeError('cannot delete implementations')
 
     def __len__(self):
         if self._registry[None] is None:
@@ -446,8 +440,9 @@ def dispatch(T, L, fname='function'):
     else:
         raise KeyError(T)
 
+
 def subtypes(T, D):
-    """Return all entries in D that are subtypes of T, i.e., aresubtypes(t_i, T)"""
+    """Return all entries in D that are subtypes of T, i.e., subtypes(t_i, T)"""
     
     subclass = subtypecheck
     return [S for S in D if subclass(S, T)]
@@ -460,19 +455,26 @@ def supertypes(T, D):
     return [S for S in D if subclass(T, S)]
 
 
-def generic(func=None, **kwds):
+def generic(*args, **kwds):
     """Decorator used to define a generic function"""
 
-    # Transforms to decorator
-    if func is None and kwds:
-        def decorator(func):
-            return generic(func, **kwds)
-        return decorator
+    if args and callable(args[0]):
+        func = args[0]
+        args = args[1:]
+        result = Generic(func.__name__)
+        if args or kwds:
+            result.overload(*args, **kwds)(func)
+        else:
+            result.overload(func)
+        return result
 
-    # Finds the approriate base class and return the generic function
-    generic = Generic(func.__name__)
-    generic.overload(func)
-    return generic
+    else:
+        def decorator(func):
+            if not callable(func):
+                msg = 'must decorate function, got: %s' % type(func).__name__
+                raise TypeError(msg)
+            return generic(func, *args, **kwds)
+        return decorator
 
 
 def inspect_signature(func):
