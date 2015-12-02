@@ -7,7 +7,7 @@ import six
 import inspect
 import functools
 from collections import MutableMapping, Mapping
-from .errors import DispatchError, raise_no_methods
+from .errors import DispatchError, no_methods_error
 from .util import tname
 
 __all__ = ['Generic', 'generic', 'overload']
@@ -17,6 +17,7 @@ try:
     from generic.core_fast import FastCache as _FastCache
     _generic_base = type('Base', (_FastCache, MutableMapping), {})
 except ImportError:
+    _FastCache = None
     _generic_base = MutableMapping
     import warnings
     warnings.warn('no ctypes found: using slow version of generic type dispatch')
@@ -58,7 +59,7 @@ class Generic(_generic_base):
             try:
                 method = self[types]
             except KeyError:
-                raise_no_methods(self, types=types)
+                raise no_methods_error(self, types=types)
         if method is None:
             raise TypeError('no fallback defined for %s()' % self.__name__)
         return method(*args, **kwds)
@@ -119,8 +120,9 @@ class Generic(_generic_base):
 
     def __setitem__(self, argtypes, func):
         # Normalize inputs
+        restype = None
         if argtypes is None:
-            restype = None
+            pass
         elif isinstance(argtypes, type):
             argtypes, restype = (argtypes,), None
         if argtypes is not None:
@@ -182,7 +184,10 @@ class Generic(_generic_base):
         implementation for the given types registered on the generic function.
         
         Raises a TypeError if no suitable implementation is found."""
-        
+
+        if not all(isinstance(T, type) for T in argtypes):
+            raise TypeError('dispatch expect types, got: %r' % argtypes)
+
         registry = self._registry
         while True:
             T = dispatch(argtypes, registry, fname=self.__name__)
@@ -191,7 +196,7 @@ class Generic(_generic_base):
             # The None root is always present. It is assigned to None if no
             # fallback function is available
             if wrapped is None:
-                raise_no_methods(self, types=argtypes)
+                raise no_methods_error(self, types=argtypes)
     
             factory, restype = wrapped
             implementation = factory(argtypes, restype)
@@ -221,7 +226,7 @@ class Generic(_generic_base):
                 factory, _ = dispatch(argtypes, registry, fname=self.__name__)
                 return factory
             except TypeError: # Found the None root type
-                raise_no_methods(self, types=argtypes)
+                raise no_methods_error(self, types=argtypes)
             
     def which(self, *args):
         """Returns the concrete method that would be used if called with the
@@ -411,14 +416,14 @@ def subtypecheck(types1, types2):
         return all(issubclass(T1, T2) for (T1, T2) in zip(types1, types2))
 
 
-def dispatch(T, L, fname='function'):
+def dispatch(T, options, fname='function'):
     """Dispatch algorithm.
     
-    Return S in L where S is the most specialized signature for which 
-    subtypecheck(T, S) is valid."""
+    Return S in the options sequence where S is the most specialized signature
+    for which subtypecheck(T, S) is valid."""
     
     subclass = subtypecheck
-    parents = [S for S in L if subclass(T, S)]
+    parents = [S for S in options if subclass(T, S)]
     
     for _ in range(len(parents)):
         if len(parents) == 1:

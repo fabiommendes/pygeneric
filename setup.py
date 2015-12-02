@@ -1,4 +1,13 @@
-#-*- coding: utf8 -*-
+# -*- coding: utf8 -*-
+#
+# This is my "best-practices" project structure that I copy and past to other
+# projects. Fell free to imitate. It is mostly based on advice from
+#
+#   https://www.jeffknupp.com/blog/2013/08/16/open-sourcing-a-python-project
+# -the-right-way/
+#
+# but with a few twists.
+#
 import os
 import sys
 import setuptools
@@ -113,7 +122,7 @@ in Python 2.
     license='GPL',
     install_requires=['six'],
     zip_safe=False,
-    tests_require=['pytest', 'psutil'],
+    tests_require=['pytest', 'psutil', 'manuel'],
     setup_requires=[],
     **setup_kwds
 )

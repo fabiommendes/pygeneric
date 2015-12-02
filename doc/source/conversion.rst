@@ -15,6 +15,7 @@ objects between different types. The convert function is called as
 ``convert(obj, type)`` and attempts to convert ``obj`` to the given type
 ``type``.
 
+    >>> from generic import convert
     >>> convert(42, float)
     42.0
 

@@ -16,7 +16,7 @@ class DispatchError(TypeError):
 #
 # Error functions
 #
-def get_no_methods_error(func, args=None, types=None):
+def no_methods_error(func, args=None, types=None):
     """Format and return a TypeError for the given func when called with
     the
     given arguments"""
@@ -24,8 +24,7 @@ def get_no_methods_error(func, args=None, types=None):
     if args:
         types = [type(x) for x in args]
 
-    name = func if isinstance(func, str) else getattr(func, '__name__',
-                                                      func)
+    name = func if isinstance(func, str) else getattr(func, '__name__', func)
 
     if types is None:
         return DispatchError('invalid call to %s()' % func)
@@ -39,7 +38,7 @@ def raise_no_methods(func, args=None, types=None):
     the
     given arguments"""
 
-    raise get_no_methods_error(func, args, types)
+    raise no_methods_error(func, args, types)
 
 
 def raise_unordered_types(T1, T2):

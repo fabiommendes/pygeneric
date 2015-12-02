@@ -1,10 +1,10 @@
-'''
+"""
 These module implement parametric types for Python.
 
 We want to integrate with Python's typing module in the future. That's why 
 there is pytyping.py and a typeparams.py in this folder. They are not currently 
 used. 
-'''
+"""
 
 import abc
 
@@ -31,19 +31,18 @@ try:
     from typing import Any
 except ImportError:
     class Any(ABC):
-        '''Has basic functionality of typing.Any.'''
+        """Has basic functionality of typing.Any."""
 
 
 class ParametricMeta(abc.ABCMeta):
-
-    '''
+    """
     Meta class for Parametric types.
 .
 
     It overrides __getitem__ to implement type parametrization and __call__
     to prevent creating instances of the abstract type and in order to find a
     suitable concrete subtype from the type of the arguments.
-    '''
+    """
 
     def __new__(cls, name, bases, ns, *, 
                 abstract=False, 
@@ -124,21 +123,11 @@ class ParametricMeta(abc.ABCMeta):
             params = newparams
 
         # Create name, bases and namespace for the new parametrized type
-        name = _subtype_name(self, params) 
-        
-        try:
-            basesgetter = self.__preparebases__
-        except AttributeError:
-            basesgetter = lambda params: (self,)
-        finally:
-            bases = basesgetter(params)
-            
-        try:
-            nsgetter = self.__preparenamespace__
-        except AttributeError:
-            nsgetter = lambda params: {}
-        finally:
-            ns = nsgetter(params)
+        basesgetter = getattr(self, '__preparebases__', lambda params: (self,))
+        nsgetter = getattr(self, '__preparenamespace__', lambda params: {})
+        name = _subtype_name(self, params)
+        bases = basesgetter(params)
+        ns = nsgetter(params)
         ns.setdefault('__slots__', ())
         
         # Decide if it is abstract and has an origin
@@ -178,8 +167,8 @@ class ParametricMeta(abc.ABCMeta):
 # Auxiliary functions
 #
 def _check_parameters(origin, params):
-    '''Check if the given parameters are consistent with origin 
-    specification'''
+    """Check if the given parameters are consistent with origin 
+    specification"""
     
     abstract_params = origin.__parameters__
     params = list(params)
@@ -197,9 +186,9 @@ def _check_parameters(origin, params):
                 raise ValueError('expected a %s instance, got %r' % (tname, y))
     
 def _normalize_params(origin, params):
-    '''Convert all parameters to a standard form: return value is always a
+    """Convert all parameters to a standard form: return value is always a
     tuple of the same length as origin.__parameters__. All ellipsis are 
-    replaced by None'''
+    replaced by None"""
     
     if origin is None:
         if params is None:
@@ -229,22 +218,22 @@ def _normalize_params(origin, params):
     return tuple(params)
 
 def _is_concrete_params(origin, params):
-    '''Test if the given parameter sequence can represent the parameters of
-    a concrete type'''
+    """Test if the given parameter sequence can represent the parameters of
+    a concrete type"""
     
     if origin.__parameters__ is None:
         return False
     return all(x != y for (x, y) in zip(params, origin.__parameters__))
 
 def _isconcrete(x):
-    '''Return true if type is concrete'''
+    """Return true if type is concrete"""
     
     if issubclass(type(x), ParametricMeta):
         return x.__origin__ is not None and not x.__abstract__
     return False
 
 def _subtype_name(origin, params):
-    '''Compute the subtype's name from its origin class and parameters.'''
+    """Compute the subtype's name from its origin class and parameters."""
     
     out = []
     params = list(params)
@@ -267,21 +256,20 @@ def _subtype_name(origin, params):
 
 
 class Parametric(ABC, metaclass=ParametricMeta):
-
-    '''
+    """
     Base class for parametric types.
-    '''
+    """
     __slots__ = ()
 
 
 class Mutable(ABC):
-    '''Base class for all mutable types'''
+    """Base class for all mutable types"""
 
     __slots__ = ()
 
 
 class Immutable(ABC):
-    '''Base class for all immutable types'''
+    """Base class for all immutable types"""
 
     __slots__ = ()
 
@@ -290,7 +278,7 @@ class Immutable(ABC):
 # Utility functions
 #
 def sameorigin(T1, T2):
-    '''Return True if the two types share the same origin'''
+    """Return True if the two types share the same origin"""
     
     if T1 is T2:
         return True

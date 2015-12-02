@@ -7,12 +7,13 @@ Dependencies
 ============
 
 `pygeneric` can run in many Python implementations including CPython and 
-PyPy. In CPython it can be installed as a (slower) pure-python version or it
-can use a Cython compiled extensions to speed-up things in C.
+PyPy. In CPython, it can user a Cython compiled extension to speed-up things in
+C. The effect is not dramatic unless you are calling very simple functions in
+tight loops. The default pure-python implementation is fast enough for most
+applications.
 
-Don't be alarmed if you are running an unoptimized code: these speed benefits
-are negligible unless you are dispatching to very simple functions that are
-called many times in tight loops.
+The only required dependency is the *six* package, which is very common and has
+a good change to be already installed.
 
 
 Installation commands
@@ -33,3 +34,6 @@ Python installation path)::
 
     $ cd c:\python34
     $ python -m pip install pygeneric
+
+In any of these cases, it will fetch the required dependency on *six* if
+necessary.
