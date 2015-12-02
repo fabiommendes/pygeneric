@@ -162,7 +162,8 @@ class ParametricMeta(abc.ABCMeta):
         self.__subtypes__[params] = T
         if not issubclass(T, self):
             self.register(T)
-        
+
+
 #
 # Auxiliary functions
 #
@@ -184,7 +185,8 @@ def _check_parameters(origin, params):
             if not isinstance(y, x):
                 tname = x.__name__
                 raise ValueError('expected a %s instance, got %r' % (tname, y))
-    
+
+
 def _normalize_params(origin, params):
     """Convert all parameters to a standard form: return value is always a
     tuple of the same length as origin.__parameters__. All ellipsis are 
@@ -217,6 +219,7 @@ def _normalize_params(origin, params):
         
     return tuple(params)
 
+
 def _is_concrete_params(origin, params):
     """Test if the given parameter sequence can represent the parameters of
     a concrete type"""
@@ -225,12 +228,14 @@ def _is_concrete_params(origin, params):
         return False
     return all(x != y for (x, y) in zip(params, origin.__parameters__))
 
+
 def _isconcrete(x):
     """Return true if type is concrete"""
     
     if issubclass(type(x), ParametricMeta):
         return x.__origin__ is not None and not x.__abstract__
     return False
+
 
 def _subtype_name(origin, params):
     """Compute the subtype's name from its origin class and parameters."""

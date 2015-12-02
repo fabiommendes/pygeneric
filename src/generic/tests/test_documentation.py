@@ -9,6 +9,7 @@ import os
 def _factory(func, name):
     """Create a new pytest test function"""
 
+    # Wrap function so pytest do not expect an spurious "self" fixture.
     def wrapped():
         func()
 
@@ -16,7 +17,7 @@ def _factory(func, name):
     return wrapped
 
 
-def add_manuel_suite(D):
+def add_manuel_suite():
     """
     Prepare Manuel test suite.
     """
@@ -35,14 +36,17 @@ def add_manuel_suite(D):
     m += manuel.doctest.Manuel()
     m += manuel.codeblock.Manuel()
 
-    # Add tests to the global namespace
+    # Copy tests from the suite to the global namespace
+    names = globals()
     suite = manuel.testing.TestSuite(m, *files)
     for i, test in enumerate(suite):
         name = 'test_manuel_example_%s' % i
-        D[name] = _factory(test.runTest, name)
+        names[name] = _factory(test.runTest, name)
     return suite
 
-add_manuel_suite(globals())
+
+add_manuel_suite()
+
 
 if __name__ == '__main__':
     pytest.main('test_documentation.py')
