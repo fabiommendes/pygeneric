@@ -6,7 +6,15 @@ import pytest
 import os
 
 
-# TODO: integrate manuel with py.test
+def _factory(func, name):
+    """Create a new pytest test function"""
+
+    def wrapped():
+        func()
+
+    wrapped.__name__ = name
+    return wrapped
+
 
 def add_manuel_suite(D):
     """
@@ -30,15 +38,11 @@ def add_manuel_suite(D):
     # Add tests to the global namespace
     suite = manuel.testing.TestSuite(m, *files)
     for i, test in enumerate(suite):
-        key = 'test_manuel_%s' % i
-        D[key] = test
+        name = 'test_manuel_example_%s' % i
+        D[name] = _factory(test.runTest, name)
     return suite
-
 
 add_manuel_suite(globals())
 
 if __name__ == '__main__':
-    import unittest
-
-    unittest.TextTestRunner().run(add_manuel_suite({}))
     pytest.main('test_documentation.py')
