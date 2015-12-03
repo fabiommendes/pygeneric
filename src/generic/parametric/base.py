@@ -13,7 +13,7 @@ __all__ = [
     'ParametricMeta', 'Parametric', 'ABC', 'Immutable', 'Mutable', 'Any',
     
     # Functions
-    'sameorigin',
+    'sameorigin', 'parameters',
 ]
 
 # Import symbols with default implementations
@@ -293,3 +293,9 @@ def sameorigin(T1, T2):
         return False
 
 
+def parameters(obj):
+    """parameters(obj) <==> obj.__parameters__.
+
+    Return the class parameters for some class or instance."""
+
+    return obj.__parameters__

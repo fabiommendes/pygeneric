@@ -8,6 +8,7 @@ decorator, but they can also be build by an explicit instantiation of the
 :class:`Generic` class.
 
 .. code-block:: python
+
     from generic import generic
 
     @generic
@@ -19,6 +20,7 @@ of the ``@func.overload`` or ``@func.register``
 decorators:
 
 .. code-block:: python
+
     from collections import Sequence
     from numbers import Number
 
@@ -57,19 +59,25 @@ Got 1 and 2
 
 One can access keys, iterate, and do most operations that are possible with a
 regular dictionary. This includes setting items as a (not encouraged)
-alternative to overloading::
+alternative to overloading:
+
+.. code-block:: python
 
     def func_str(x, y):
         print('Got two strings: %r and %r' % (x, y))
     func[str, str] = func_str
 
+
 An useful idiom is to use indexing to call a generic implementation from a more
-specialized one::
+specialized one:
+
+.. code-block:: python
 
     @func.overload
     def func(x: float, y:float):
         func[Number, Number](x, y)
         print('But beware floats are not associative')
+
 
 It can also be used to inspect the generic function for the number and types
 of methods implemented.
@@ -78,17 +86,22 @@ of methods implemented.
 Factory functions
 =================
 
-Generic functions accept factory methods to be defined: instead of providing an
-implementation for a specific set of argument types, a factory method produces
-a factory that create such implementations when called. Factory functions can
-also skip certain type combinations and delegate them to a less specialized
-implementation.
+Generic functions can create methods on-the-fly using factory functions:
+instead of providing an implementation for a specific set of argument types,
+a factory method is a function that return other functions when called.
 
-We define a factory method by using the ``factory=True`` attribute of the
-``@func.register`` decorator::
+This is acomplished using the ``factory=True`` attribute of the
+``@func.register`` decorator:
+
+.. code-block:: python
+
+    from collections import Mapping
 
     @func.register(Mapping, Mapping, factory=True)
     def factory(T1, T2):
+        # This function will return the implementation for types T1 and T2.
+        # If it return NotImplemented, the next method in the dispatch priority
+        # list will be chosen.
         if T1 is T2 and T1 is dict:
             return NotImplemented
         elif T1 is T2:
@@ -100,6 +113,7 @@ We define a factory method by using the ``factory=True`` attribute of the
                 print('Got two mappings of different types')
             return implementation2
 
+
 The factory above produces 3 different functions depending on the types of input
 arguments. If both objects are instances of ``dict``, it returns
 ``NotImplementedError``, which tells the dispatcher to pick the next
@@ -110,18 +124,23 @@ Generic function dictionary. Thus one can later specialize to any subtype (e.g.,
 func(dict, dict)) without conflicts.
 
 Factory functions are useful to emulate what in other languages can be
-accomplished with type parametrization. In Julia, for instance, it is possible
-to define complex dispatch in parametric types such as::
+accomplished with parametrization on function definitions. In Julia, for
+instance, it is possible to define complex dispatch such as:
+
+.. code-block:: julia
 
     function func{T<:Number}(L::Array{T}, x::T)
         println("Got a sequence of numbers and an extra element")
     end
 
-In Julia, this rule is only used if L is an array of numbers of type T and
+
+This rule is only used if L is an array of numbers of type T and
 x is of the same type. If ``L = [1, 2, 3]`` and ``x = 1.0``, the method will not
 be used. This kind of behavior is very difficult to support using Python's
-(comparatively limited) type system. Factory functions can implement a similar
-functionality albeit not as elegantly::
+comparatively limited type system. Factory functions can implement a similar
+functionality albeit not as elegantly:
+
+.. code-block:: python
 
     from generic.parametric import parameters, List
 
@@ -132,6 +151,7 @@ functionality albeit not as elegantly::
                 print('Got a sequence of numbers and an extra element')
         else:
             return NotImplemented
+
 
 In the above example, we are using the List type defined in ``generic.parametric``.
 It consists in a parametric type representing a list of objects with uniform
@@ -152,7 +172,8 @@ Pygeneric always tests subclassing using :func:`issubclass`, and never uses
 always yield the same results, there is no guarantee. To cite the PEP:
 
 .. quote::
-Like all other things in Python, these promises are in the nature of a
+
+    Like all other things in Python, these promises are in the nature of a
     gentlemen's agreement, which in this case means that while the language
     does enforce some of the promises made in the ABC, it is up to the
     implementer of the concrete class to insure that the remaining ones are
@@ -162,11 +183,15 @@ Take a "Prime" class for instance. We can define it so ``isinstance(7, Prime) ==
 However, we don't know what to make of ``issubclass(int, Prime)``: some integers
 are primes, and some are not. Pygeneric cannot understand this.
 
+.. ignore-next-block
+.. code-block:: python
+
     @func.overload
     def func(x: Prime, y: Prime):
         print('Got two primes!')
 
     func(2, 3)  # we don't know what to do!
+
 
 If we interpret the ``issubclass(A, B)`` relation as true iff all instances of
 A are instances of B, then it is safe to say that ``issubclass(int, Prime) == False``.

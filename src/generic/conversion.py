@@ -33,13 +33,13 @@ def _do_nothing(x):
 
 
 def convert(value, T):
-    """Convert value to the given type.
+    """Convert *value* to the given type *T*.
 
     It raises a TypeError if no conversion is possible and a ValueError if
     conversion is possible in general, but not for the specific value given.
 
-    Example
-    -------
+    Examples
+    --------
 
     >>> convert(42, float)
     42.0
@@ -89,12 +89,21 @@ def get_conversion(from_type, to_type):
 def set_conversion(from_type, to_type, function=None):
     """Register a function that converts between the two given types.
 
+
+    Examples
+    --------
+
     Can be used as a decorator as in::
 
         @set_conversion(int, float)
         def int_to_float(x):
             return float(x)
 
+    Now, the integer to floats are handled by the  int_to_float() function,
+    i.e.,
+
+    ::
+        convert(42, float) <==> int_to_float(42)
     """
 
     # Decorator form
@@ -122,8 +131,19 @@ PROMOTION_RULES = {}
 def promote(x, y, *args):
     """Promote x and y to a common type.
 
-    Example
+    Parameters
+    ----------
+
+    This function accept any number of parameters and return the result of
+    promotion for all the collected types.
+
+    Returns
     -------
+
+    A tuple with the resulting promotions.
+
+    Examples
+    --------
 
     >>> promote(1, 3.14)
     (1.0, 3.14)
@@ -152,8 +172,8 @@ def promote(x, y, *args):
 def _promote_values(*args):
     """Return a promotion of many elements to the most generic type
 
-    Example
-    -------
+    Examples
+    --------
 
     >>> _promote_values(1, 2, 3.0)
     (1.0, 2.0, 3.0)
@@ -194,6 +214,13 @@ def get_promotion(T1, T2):
         return T1
 
     # Look for a promotion rule for a base type
+    return _compute_promotions(T1, T2)
+
+
+def _compute_promotions(T1, T2):
+    """Compute the valid promotions for types T1 and T2, assuming they are not
+    present in the PROMOTION_FUNCTIONS dictionary."""
+
     rules = PROMOTION_FUNCTIONS
     valid = []
     for ti in T1.mro():
@@ -201,7 +228,7 @@ def get_promotion(T1, T2):
             if (ti, tj) in rules and (tj, ti) not in valid:
                 valid.append((ti, tj))
 
-    # No valid rules found
+    # No rule were found
     if not valid:
         if issubclass(T1, T2):
             # Try to convert to subtype
@@ -219,13 +246,14 @@ def get_promotion(T1, T2):
             raise TypeError('no promotion rule found for %s and %s' % aux)
 
     # More than one rule was found
-    if len(valid) > 1:
+    elif len(valid) > 1:
         aux = (T1.__name__, T2.__name__)
         raise TypeError('ambiguous promotion found for %s and %s' % aux)
 
     # A single promotion was found
-    # TODO: cache it?
-    return rules[valid[0]]
+    else:
+        # TODO: cache it?
+        return rules[valid[0]]
 
 
 def set_promotion(T1, T2, *,
@@ -239,7 +267,7 @@ def set_promotion(T1, T2, *,
     Parameters
     ----------
 
-    T1, T2: type
+    T1,T2: type
         The two input types the promotion function relates to
     function : callable
         A function f(x, y) --> (X, Y) that performs the promotion.

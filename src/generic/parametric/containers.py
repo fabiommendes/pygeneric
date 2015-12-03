@@ -1,5 +1,7 @@
 from generic.parametric.base import Parametric
 
+__all__ = ['List', 'Dict']
+
 
 class List(Parametric, list):
     """A parametric list with values of uniform type.
@@ -122,7 +124,7 @@ class Dict(Parametric, dict):
             raise TypeError('contain invalid key-value pairs')
 
 
-class Set(Parametric, set):
+class _Set(Parametric, set):
     """A parametric set object with values of uniform type.
 
     Set[T] objects are neither covariant nor contravariant, i.e., Set[T] is
@@ -135,7 +137,7 @@ class Set(Parametric, set):
         raise NotImplementedError
 
 
-class Tuple(Parametric, tuple):
+class _Tuple(Parametric, tuple):
     """A parametric tuple object with values of uniform type.
 
     Set[T] objects are neither covariant nor contravariant, i.e., Set[T] is

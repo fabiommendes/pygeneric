@@ -35,37 +35,42 @@ Most of the functionality present in this package works around the type dispatch
 in generic functions. We declare a generic function using the syntax
 
 .. code-block:: python
+
     from generic import generic, Number, Sequence
 
     @generic
     def func(x, y):
         print('Got %r and %r' % (x, y))
 
+
 Type dispatch can be defined in Python 3 as
 
 .. code-block:: python
+
     @func.overload
     def func(x: Number, y: Number):
         print('Got two numbers: %r and %r' % (x, y))
 
+
 The Python 2-friendly syntax (which can also be useful in Python 3) is:
 
 .. code-block:: python
+
      @func.register(Sequence, Sequence)
      def func(x, y):
          print('Got two sequences: %r and %r' % (x, y))
+
 
 Depending on the types of each argument, the dispatcher will choose either one
 of these three implementations
 
 >>> func(42, 0.0)
 Got two numbers: 42 and 0.0
-
 >>> func([1, 2], (3, 4))
 Got two sequences: [1, 2] and (3, 4)
-
 >>> func("foo", "bar")
 Got two sequences: 'foo' and 'bar'
+
 
 The type dispatch always chooses the most specialized method for the given
 argument types.
@@ -73,6 +78,7 @@ argument types.
 Consider the two specialized dispatches
 
 .. code-block:: python
+
     from numbers import Integral
 
     @func.overload
@@ -83,14 +89,13 @@ Consider the two specialized dispatches
     def func(x: Integral, y: Integral):
        print('Got two integers: %r and %s' % (x, y))
 
+
 ``func`` knows what to do
 
 >>> func(1, 2)
 Got two integers: 1 and 2
-
 >>> func(1, 2.0)
 Got one integer: 1 and 2.0
-
 >>> func(2.0, 1)
 Got two numbers: 2.0 and 1
 
@@ -99,6 +104,6 @@ Further information
 ===================
 
 Did you find this feature useful? Then start using pygeneric now!
-Check the __documentation for additional information.
+Check the documentation__ for additional information.
 
 .. __documentation:: http://pythonhosted.org/pygeneric/
