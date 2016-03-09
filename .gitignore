@@ -6,6 +6,7 @@
 /.settings/
 /.benchmarks/
 /doc/build/
+/resources/
 **/__pycache__/
 **/htmlcov/
 html.zip

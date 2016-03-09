@@ -5,7 +5,7 @@ from generic import generic
 #
 # Fixtures
 #
-@pytest.fixture
+@pytest.    fixture
 def addfunc():
     @generic
     def addfunc(x, y):

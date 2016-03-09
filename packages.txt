@@ -1,0 +1,23 @@
+# List of packages to install for different package managers. It will
+# try these before pip
+
+[dev]
+apt-get =
+    python3-psutil
+
+brew =
+    python3-psutil
+
+pacman =
+    python3-psutil
+
+[end-user]
+apt-get =
+    python3-psutil
+
+brew =
+    python3-psutil
+
+pacman =
+    python3-psutil
+
