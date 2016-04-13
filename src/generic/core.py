@@ -19,8 +19,8 @@ try:
 except ImportError:
     _FastCache = None
     _generic_base = MutableMapping
-    import warnings
-    warnings.warn('no ctypes found: using slow version of generic type dispatch')
+    #import warnings
+    #warnings.warn('no cython found: using slow version of generic type dispatch')
 
 
 class Generic(_generic_base):
