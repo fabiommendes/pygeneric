@@ -30,7 +30,7 @@ with open(os.path.join(SRC, 'generic', 'meta.py'), 'w') as F:
     F.write(
         '# Auto-generated file. Please do not edit\n'
         '__version__ = %r\n' % VERSION +
-        '__author__ = %r\n' % AUTHOR)
+        '__author__ = {0!r}\n'.format(AUTHOR))
 
 
 #

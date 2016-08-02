@@ -39,14 +39,14 @@ class Tree(object):
     def __repr__(self):
         tname = type(self).__name__
         N = len(self.tail)
-        return '<%s (%r) with %s sub-trees>' % (tname, self.head, N)
+        return '<{0!s} ({1!r}) with {2!s} sub-trees>'.format(tname, self.head, N)
 
     def pprint(self):
         '''Return a string with a pretty-printed version of the tree'''
 
         out = [str(self)]
         leaves = [(4 * len(i), i, x.head) for i, x in self.walkitems(True)]
-        leaves = ['%s%r: %r' % (' ' * n, list(i), head) for
+        leaves = ['{0!s}{1!r}: {2!r}'.format(' ' * n, list(i), head) for
                   (n, i, head) in leaves]
         out.extend(leaves)
         return '\n'.join(out)
@@ -236,7 +236,7 @@ class OrderedTree(Tree):
         for index, sub in self.walkitems():
             if sub is subtree:
                 return index
-        raise IndexError('not found in tree: %r' % subtree)
+        raise IndexError('not found in tree: {0!r}'.format(subtree))
 
 
 class PosetMap(collections.MutableMapping):
@@ -296,9 +296,9 @@ class PosetMap(collections.MutableMapping):
         try:
             func = self.tree.ordering.__name__
         except:
-            func = '%s object' % type(self.tree.ordering).__name__
-        data = ', '.join('%r: %r' % item for item in self.iteritems())
-        return 'PosetMap(%s, %s)' % (func, data)
+            func = '{0!s} object'.format(type(self.tree.ordering).__name__)
+        data = ', '.join('{0!r}: {1!r}'.format(*item) for item in self.iteritems())
+        return 'PosetMap({0!s}, {1!s})'.format(func, data)
 
     def iteritems(self):
         for node in self.tree.walk():

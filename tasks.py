@@ -37,11 +37,11 @@ def py2src():
             fixes = fixes.split()
     else:
         fixes = list(fixes)
-    fixes = ' '.join('-f %s' % fix for fix in fixes)
+    fixes = ' '.join('-f {0!s}'.format(fix) for fix in fixes)
 
     # Move source to py2src folder and patch encoding
     run('cp src/ py2src/ -R')
-    run('3to2 py2src/ --no-diffs -j4 -w %s' % fixes)
+    run('3to2 py2src/ --no-diffs -j4 -w {0!s}'.format(fixes))
 
 
 @task
