@@ -161,7 +161,7 @@ def _opsame_meta_factory(opname):
     """Returns a factory tha can be used to test if the object implements a 
     __<opname>same__() method"""
     
-    samemethod = '__%ssame__' % opname
+    samemethod = '__{0!s}same__'.format(opname)
 
     def factory(argtypes, restype):
         T1, T2 = argtypes
@@ -182,8 +182,8 @@ def _opsame_meta_factory(opname):
 def _arithmetic_op_factory(opname):
     """Creates a generic arithmetic operator with the given name"""
     
-    method = '__%s__' % opname
-    rmethod = '__r%s__' % opname
+    method = '__{0!s}__'.format(opname)
+    rmethod = '__r{0!s}__'.format(opname)
     
     @generic
     def op(x, y):
@@ -235,8 +235,8 @@ lshift = _arithmetic_op_factory('lshift')
 def _relational_op_factory(opname, ropname):
     """Creates a generic arithmetic operator with the given name"""
 
-    method = '__%s__' % opname
-    rmethod = '__%s__' % ropname
+    method = '__{0!s}__'.format(opname)
+    rmethod = '__{0!s}__'.format(ropname)
 
     @generic
     def op(x, y):

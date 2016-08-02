@@ -40,7 +40,7 @@ def add_manuel_suite():
     names = globals()
     suite = manuel.testing.TestSuite(m, *files)
     for i, test in enumerate(suite):
-        name = 'test_manuel_example_%s' % i
+        name = 'test_manuel_example_{0!s}'.format(i)
         names[name] = _factory(test.runTest, name)
     return suite
 

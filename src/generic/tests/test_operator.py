@@ -12,7 +12,7 @@ def T():
             return T(self.data + other.data)
         
         def __repr__(self):
-            return 'T(%s)' % self.data
+            return 'T({0!s})'.format(self.data)
         
         def __eqsame__(self, other):
             return self.data == other.data

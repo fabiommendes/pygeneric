@@ -341,13 +341,13 @@ class TimedMultiFunction(MultiFunction):
         if sort_by == 'time':
             L = sorted(self._timings.items(), key=lambda x: x[1])
         else:
-            raise ValueError('invalid sort method: %r' % sort_by)
+            raise ValueError('invalid sort method: {0!r}'.format(sort_by))
 
         # Print it
-        msg = 'Performance test for %s()' % self.name
+        msg = 'Performance test for {0!s}()'.format(self.name)
         print(msg + '\n' + '-' * len(msg), '\n')
         for name, time in L:
-            print('    %s: %s sec' % (name, time))
+            print('    {0!s}: {1!s} sec'.format(name, time))
 
 
 #==============================================================================
@@ -404,7 +404,7 @@ def haslib(libname, func=None, descr=None):
     (2+0j)
     '''
     if descr:
-        libname = '%s (%s)' % (libname, descr)
+        libname = '{0!s} ({1!s})'.format(libname, descr)
 
     def decorator(func):
         global JOB
@@ -513,7 +513,7 @@ def try_import(*args, **kwargs):
     elif 'raises' in kwargs:
         raises = kwargs['raises']
     else:
-        raise TypeError('invalid keyword argument: %s' % kwargs.popitem()[0])
+        raise TypeError('invalid keyword argument: {0!s}'.format(kwargs.popitem()[0]))
 
     # Import modules in sequence
     for module in args:
@@ -583,7 +583,7 @@ def timeit(title=None):
     delta = gettime() - t0
     out.value = delta
     if title is not None:
-        print('%s: %s sec' % (title, delta))
+        print('{0!s}: {1!s} sec'.format(title, delta))
 
 #==============================================================================
 # Late binding

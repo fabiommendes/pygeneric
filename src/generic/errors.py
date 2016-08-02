@@ -27,10 +27,10 @@ def no_methods_error(func, args=None, types=None):
     name = func if isinstance(func, str) else getattr(func, '__name__', func)
 
     if types is None:
-        return DispatchError('invalid call to %s()' % func)
+        return DispatchError('invalid call to {0!s}()'.format(func))
     else:
         data = ', '.join(T.__name__ for T in types)
-        return DispatchError('no method found for %s(%s)' % (name, data))
+        return DispatchError('no method found for {0!s}({1!s})'.format(name, data))
 
 
 def raise_no_methods(func, args=None, types=None):
@@ -53,7 +53,7 @@ def get_unordered_types_error(T1, T2):
     ordered."""
 
     names = T1.__name__, T2.__name__
-    return TypeError('there is no order relation for %s and %s.' % names)
+    return TypeError('there is no order relation for {0!s} and {1!s}.'.format(*names))
 
 
 def raise_unordered(x, y):

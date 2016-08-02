@@ -96,11 +96,11 @@ class ParametricMeta(abc.ABCMeta):
 
     def __call__(self, *args, **kwds):
         if self.__abstract__:
-            raise TypeError('cannot instantiate %s' % self.__name__)
+            raise TypeError('cannot instantiate {0!s}'.format(self.__name__))
         elif self.__origin__ is None:
             new = self.__abstract_new__(*args, **kwds)
             if new.__class__ is self:
-                raise TypeError('cannot instantiate %s' % self.__name__)
+                raise TypeError('cannot instantiate {0!s}'.format(self.__name__))
             return new
         else:
             return super(ParametricMeta, self).__call__(*args, **kwds)
@@ -109,7 +109,7 @@ class ParametricMeta(abc.ABCMeta):
         try:
             return self.__subtypes__[params]
         except TypeError:
-            raise TypeError('%s cannot be parametrized' % self.__name__)
+            raise TypeError('{0!s} cannot be parametrized'.format(self.__name__))
         except KeyError:
             pass
 
@@ -153,7 +153,7 @@ class ParametricMeta(abc.ABCMeta):
         params = _normalize_params(self, params)
         
         if self.__subtypes__ is None:
-            raise TypeError('cannot assign subtypes to %s' % self.__name__)
+            raise TypeError('cannot assign subtypes to {0!s}'.format(self.__name__))
         if params in self.__subtypes__:
             raise KeyError('cannot override to an existing type')
         
@@ -184,7 +184,7 @@ def _check_parameters(origin, params):
         if y is not None or y is not Ellipsis:
             if not isinstance(y, x):
                 tname = x.__name__
-                raise ValueError('expected a %s instance, got %r' % (tname, y))
+                raise ValueError('expected a {0!s} instance, got {1!r}'.format(tname, y))
 
 
 def _normalize_params(origin, params):
@@ -257,7 +257,7 @@ def _subtype_name(origin, params):
     else:
         out.append('?')
     
-    return '%s[%s]'  % (origin.__name__,  ', '.join(out))
+    return '{0!s}[{1!s}]'.format(origin.__name__, ', '.join(out))
 
 
 class Parametric(ABC, metaclass=ParametricMeta):

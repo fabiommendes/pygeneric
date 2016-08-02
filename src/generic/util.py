@@ -15,7 +15,7 @@ def print_signature(func, types):
 
     fname = func.__name__
     args = ', '.join(T.__name__ for T in types)
-    return '%s(%s)' % (fname, args)
+    return '{0!s}({1!s})'.format(fname, args)
 
 def tname(x):
     '''A shortcut to the object's type name'''

@@ -61,13 +61,13 @@ class Generic(_generic_base):
             except KeyError:
                 raise no_methods_error(self, types=types)
         if method is None:
-            raise TypeError('no fallback defined for %s()' % self.__name__)
+            raise TypeError('no fallback defined for {0!s}()'.format(self.__name__))
         return method(*args, **kwds)
 
     def __repr__(self):
         name = self.name
         size = len(self)
-        return '<generic function %(name)s() with %(size)s methods>' % locals()
+        return '<generic function {name!s}() with {size!s} methods>'.format(**locals())
 
     def __get__(self, instance, cls=None):
         """Makes it work as a method"""
@@ -186,7 +186,7 @@ class Generic(_generic_base):
         Raises a TypeError if no suitable implementation is found."""
 
         if not all(isinstance(T, type) for T in argtypes):
-            raise TypeError('dispatch expect types, got: %r' % argtypes)
+            raise TypeError('dispatch expect types, got: {0!r}'.format(argtypes))
 
         registry = self._registry
         while True:
@@ -236,7 +236,7 @@ class Generic(_generic_base):
         try:
             return self[types]
         except KeyError:
-            raise TypeError('no methods for %s' % types)
+            raise TypeError('no methods for {0!s}'.format(types))
     
     def register(self, *argtypes, **kwds):
         """Register a new implementation for the given sequence of input
@@ -250,7 +250,7 @@ class Generic(_generic_base):
         
         if kwds:
             arg = kwds.popitem()[0]
-            raise TypeError('invalid keyword argument: %s' % arg)
+            raise TypeError('invalid keyword argument: {0!s}'.format(arg))
         
         # We don't use the restype for now. Maybe in the future? Ideas?
         if func is None:
@@ -286,16 +286,16 @@ class Generic(_generic_base):
         if argtypes is not None:
             if not all(isinstance(T, type) for T in argtypes):
                 argtypes = str(argtypes)
-                raise ValueError('must be a tuple of types, got %s' % argtypes)
+                raise ValueError('must be a tuple of types, got {0!s}'.format(argtypes))
         if not isinstance(restype, (type, type(None))):
             tname = type(restype).__name__
-            raise ValueError('return type must be a type, got %s' % tname)
+            raise ValueError('return type must be a type, got {0!s}'.format(tname))
 
         # Prevent overwriting old values
         if argtypes in self._registry:
             types_repr = ', '.join(T.__name__ for T in argtypes)
             name = self.name
-            msg = 'method %s(%s) is already defined' % (name, types_repr)
+            msg = 'method {0!s}({1!s}) is already defined'.format(name, types_repr)
             raise TypeError(msg)
 
         # Add keys and update cache
@@ -437,7 +437,7 @@ def dispatch(T, options, fname='function'):
         if len(parents) != 1:
             msg = 'ambiguous dispatch. Could not chose between these methods:'
             for args in parents:
-                sig = '%s(%s)' % (fname, ', '.join(T.__name__ for T in args))
+                sig = '{0!s}({1!s})'.format(fname, ', '.join(T.__name__ for T in args))
                 msg += '\n    * ' + sig
             raise DispatchError(msg)
 
@@ -476,7 +476,7 @@ def generic(*args, **kwds):
     else:
         def decorator(func):
             if not callable(func):
-                msg = 'must decorate function, got: %s' % type(func).__name__
+                msg = 'must decorate function, got: {0!s}'.format(type(func).__name__)
                 raise TypeError(msg)
             return generic(func, *args, **kwds)
         return decorator
@@ -616,7 +616,7 @@ def _restype_checker_factory(func, argtypes, restype):
     def checked(*args, **kwds):
         out = func(*args, **kwds)
         if not isinstance(out, restype):
-            raise TypeError('wrong return type: %s' % tname(out))
+            raise TypeError('wrong return type: {0!s}'.format(tname(out)))
         return out
                  
     return checked
@@ -653,7 +653,7 @@ def _instance_check_factory(func, argtypes, restype, instancecheck=isinstance):
         else:
             out = func(*args, **kwds)
             if not instancecheck(out, restype):
-                raise TypeError('wrong return type: %s' % tname(out))
+                raise TypeError('wrong return type: {0!s}'.format(tname(out)))
             return out
                  
     return checked

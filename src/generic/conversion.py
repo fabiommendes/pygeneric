@@ -74,15 +74,15 @@ def get_conversion(from_type, to_type):
             if issubclass(to_type, from_type):
                 return _do_nothing
         except TypeError:
-            raise ValueError('not types: %r, %r' % (from_type, to_type))
+            raise ValueError('not types: {0!r}, {1!r}'.format(from_type, to_type))
 
     # Handle key error
     if not (isinstance(from_type, Type) and isinstance(to_type, Type)):
         print(Type)
         fmt = type(from_type).__name__, type(to_type).__name__
-        raise ValueError('not types: %r, %r' % (from_type, to_type))
+        raise ValueError('not types: {0!r}, {1!r}'.format(from_type, to_type))
     fmt = from_type.__name__, to_type.__name__
-    msg = "cannot convert '%s' to '%s'" % fmt
+    msg = "cannot convert '{0!s}' to '{1!s}'".format(*fmt)
     raise TypeError(msg)
 
 
@@ -116,7 +116,7 @@ def set_conversion(from_type, to_type, function=None):
     # Forbid redefinitions
     if (from_type, to_type) in CONVERT_FUNCTIONS:
         fmt = from_type.__name__, to_type.__name__
-        raise ValueError('cannot overwrite convertion from %s to %s' % fmt)
+        raise ValueError('cannot overwrite convertion from {0!s} to {1!s}'.format(*fmt))
 
     CONVERT_FUNCTIONS[from_type, to_type] = function
 
@@ -243,12 +243,12 @@ def _compute_promotions(T1, T2):
             return get_promotion(T2, T1)
         else:
             aux = (T1.__name__, T2.__name__)
-            raise TypeError('no promotion rule found for %s and %s' % aux)
+            raise TypeError('no promotion rule found for {0!s} and {1!s}'.format(*aux))
 
     # More than one rule was found
     elif len(valid) > 1:
         aux = (T1.__name__, T2.__name__)
-        raise TypeError('ambiguous promotion found for %s and %s' % aux)
+        raise TypeError('ambiguous promotion found for {0!s} and {1!s}'.format(*aux))
 
     # A single promotion was found
     else:
@@ -295,7 +295,7 @@ def set_promotion(T1, T2, *,
     if (T1, T2) in PROMOTION_FUNCTIONS or (symmetric and (T2, T1) in PROMOTION_FUNCTIONS):
         out_name = restype.__name__ if restype else (function.__name__ + '()')
         fmt = T1.__name__, T2.__name__, out_name
-        msg = 'cannot overwrite promotion rule: (%s, %s) --> %s' % fmt
+        msg = 'cannot overwrite promotion rule: ({0!s}, {1!s}) --> {2!s}'.format(*fmt)
         raise RuntimeError(msg)
 
     PROMOTION_FUNCTIONS[T1, T2] = function
@@ -319,7 +319,7 @@ def set_promotion_rule(T1, T2, T3):
     if (T1, T2) in PROMOTION_FUNCTIONS or (T2, T1) in PROMOTION_FUNCTIONS:
         fmt = T1.__name__, T2.__name__, T3.__name__
         raise RuntimeError(
-            'cannot overwrite promotion rule: (%s, %s) --> %s' % fmt)
+            'cannot overwrite promotion rule: ({0!s}, {1!s}) --> {2!s}'.format(*fmt))
 
     # Check trivial promotion
     if T1 is T2:
@@ -372,7 +372,7 @@ def promote_type(T1, T2):
             return T1
         else:
             fmt = T1.__name__, T2.__name__
-            raise TypeError('no promotion rule for (%s, %s)' % fmt)
+            raise TypeError('no promotion rule for ({0!s}, {1!s})'.format(*fmt))
 
 
 #

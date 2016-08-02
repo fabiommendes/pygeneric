@@ -15,7 +15,7 @@ def T1():
             return NotImplemented
 
         def __repr__(self):
-            return 'T1(%r)' % self.data
+            return 'T1({0!r})'.format(self.data)
 
     return T1
 
@@ -32,7 +32,7 @@ def T2():
             return NotImplemented
 
         def __repr__(self):
-            return 'T2(%r)' % self.data
+            return 'T2({0!r})'.format(self.data)
 
     return T2
 

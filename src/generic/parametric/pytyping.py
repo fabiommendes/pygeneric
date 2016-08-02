@@ -97,8 +97,8 @@ class TypingMeta(type):
 
     def __new__(cls, name, bases, namespace, *, _root=False):
         if not _root:
-            raise TypeError("Cannot subclass %s" %
-                            (', '.join(map(_type_repr, bases)) or '()'))
+            raise TypeError("Cannot subclass {0!s}".format(
+                            (', '.join(map(_type_repr, bases)) or '()')))
         return super().__new__(cls, name, bases, namespace)
 
     def __init__(self, *args, **kwds):
@@ -118,7 +118,7 @@ class TypingMeta(type):
         return False
 
     def __repr__(self):
-        return '%s.%s' % (self.__module__, _qualname(self))
+        return '{0!s}.{1!s}'.format(self.__module__, _qualname(self))
 
 
 class Final:
@@ -127,7 +127,7 @@ class Final:
     __slots__ = ()
 
     def __new__(self, *args, **kwds):
-        raise TypeError("Cannot instantiate %r" % self.__class__)
+        raise TypeError("Cannot instantiate {0!r}".format(self.__class__))
 
 
 class _ForwardRef(TypingMeta):
@@ -135,12 +135,11 @@ class _ForwardRef(TypingMeta):
 
     def __new__(cls, arg):
         if not isinstance(arg, str):
-            raise TypeError('ForwardRef must be a string -- got %r' % (arg,))
+            raise TypeError('ForwardRef must be a string -- got {0!r}'.format(arg))
         try:
             code = compile(arg, '<string>', 'eval')
         except SyntaxError:
-            raise SyntaxError('ForwardRef must be an expression -- got %r' %
-                              (arg,))
+            raise SyntaxError('ForwardRef must be an expression -- got {0!r}'.format(arg))
         self = super().__new__(cls, arg, (), {}, _root=True)
         self.__forward_arg__ = arg
         self.__forward_code__ = code
@@ -156,11 +155,9 @@ class _ForwardRef(TypingMeta):
 
     def _eval_type(self, globalns, localns):
         if not isinstance(localns, dict):
-            raise TypeError('ForwardRef localns must be a dict -- got %r' %
-                            (localns,))
+            raise TypeError('ForwardRef localns must be a dict -- got {0!r}'.format(localns))
         if not isinstance(globalns, dict):
-            raise TypeError('ForwardRef globalns must be a dict -- got %r' %
-                            (globalns,))
+            raise TypeError('ForwardRef globalns must be a dict -- got {0!r}'.format(globalns))
         if not self.__forward_evaluated__:
             if globalns is None and localns is None:
                 globalns = localns = {}
@@ -188,7 +185,7 @@ class _ForwardRef(TypingMeta):
         return issubclass(cls, self.__forward_value__)
 
     def __repr__(self):
-        return '_ForwardRef(%r)' % (self.__forward_arg__,)
+        return '_ForwardRef({0!r})'.format(self.__forward_arg__)
 
 
 class _TypeAlias:
@@ -238,16 +235,15 @@ class _TypeAlias:
         self.type_checker = type_checker
 
     def __repr__(self):
-        return "%s[%s]" % (self.name, _type_repr(self.type_var))
+        return "{0!s}[{1!s}]".format(self.name, _type_repr(self.type_var))
 
     def __getitem__(self, parameter):
         assert isinstance(parameter, type), repr(parameter)
         if not isinstance(self.type_var, TypeVar):
-            raise TypeError("%s cannot be further parameterized." % self)
+            raise TypeError("{0!s} cannot be further parameterized.".format(self))
         if self.type_var.__constraints__:
             if not issubclass(parameter, Union[self.type_var.__constraints__]):
-                raise TypeError("%s is not a valid substitution for %s." %
-                                (parameter, self.type_var))
+                raise TypeError("{0!s} is not a valid substitution for {1!s}.".format(parameter, self.type_var))
         return self.__class__(self.name, parameter,
                               self.impl_type, self.type_checker)
 
@@ -296,7 +292,7 @@ def _type_check(arg, msg):
     if isinstance(arg, str):
         arg = _ForwardRef(arg)
     if not isinstance(arg, (type, _TypeAlias)):
-        raise TypeError(msg + " Got %.100r." % (arg,))
+        raise TypeError(msg + " Got {0:.100!r}.".format(arg))
     return arg
 
 
@@ -312,7 +308,7 @@ def _type_repr(obj):
         if obj.__module__ == 'builtins':
             return _qualname(obj)
         else:
-            return '%s.%s' % (obj.__module__, _qualname(obj))
+            return '{0!s}.{1!s}'.format(obj.__module__, _qualname(obj))
     else:
         return repr(obj)
 
@@ -518,8 +514,8 @@ class UnionMeta(TypingMeta):
     def __repr__(self):
         r = super().__repr__()
         if self.__union_params__:
-            r += '[%s]' % (', '.join(_type_repr(t)
-                                     for t in self.__union_params__))
+            r += '[{0!s}]'.format((', '.join(_type_repr(t)
+                                     for t in self.__union_params__)))
         return r
 
     def __getitem__(self, parameters):
@@ -674,13 +670,13 @@ class TupleMeta(TypingMeta):
             params = [_type_repr(p) for p in self.__tuple_params__]
             if self.__tuple_use_ellipsis__:
                 params.append('...')
-            r += '[%s]' % (
-                ', '.join(params))
+            r += '[{0!s}]'.format((
+                ', '.join(params)))
         return r
 
     def __getitem__(self, parameters):
         if self.__tuple_params__ is not None:
-            raise TypeError("Cannot re-parameterize %r" % (self,))
+            raise TypeError("Cannot re-parameterize {0!r}".format(self))
         if not isinstance(parameters, tuple):
             parameters = (parameters,)
         if len(parameters) == 2 and parameters[1] == Ellipsis:
@@ -790,9 +786,9 @@ class CallableMeta(TypingMeta):
             if self.__args__ is Ellipsis:
                 args_r = '...'
             else:
-                args_r = '[%s]' % ', '.join(_type_repr(t)
-                                            for t in self.__args__)
-            r += '[%s, %s]' % (args_r, _type_repr(self.__result__))
+                args_r = '[{0!s}]'.format(', '.join(_type_repr(t)
+                                            for t in self.__args__))
+            r += '[{0!s}, {1!s}]'.format(args_r, _type_repr(self.__result__))
         return r
 
     def __getitem__(self, parameters):
@@ -898,8 +894,8 @@ class GenericMeta(TypingMeta, abc.ABCMeta):
                 if isinstance(base, TypingMeta):
                     if not isinstance(base, GenericMeta):
                         raise TypeError(
-                            "You cannot inherit from magic class %s" %
-                            repr(base))
+                            "You cannot inherit from magic class {0!s}".format(
+                            repr(base)))
                     if base.__parameters__ is None:
                         continue  # The base is unparameterized.
                     for bp in base.__parameters__:
@@ -933,8 +929,8 @@ class GenericMeta(TypingMeta, abc.ABCMeta):
     def __repr__(self):
         r = super().__repr__()
         if self.__parameters__ is not None:
-            r += '[%s]' % (
-                ', '.join(_type_repr(p) for p in self.__parameters__))
+            r += '[{0!s}]'.format((
+                ', '.join(_type_repr(p) for p in self.__parameters__)))
         return r
 
     def __eq__(self, other):
@@ -963,8 +959,7 @@ class GenericMeta(TypingMeta, abc.ABCMeta):
                     "All type variables in Generic[...] must be distinct.")
         else:
             if len(params) != len(self.__parameters__):
-                raise TypeError("Cannot change parameter count from %d to %d" %
-                                (len(self.__parameters__), len(params)))
+                raise TypeError("Cannot change parameter count from {0:d} to {1:d}".format(len(self.__parameters__), len(params)))
             for new, old in zip(params, self.__parameters__):
                 if isinstance(old, TypeVar):
                     if not old.__constraints__:
@@ -975,8 +970,7 @@ class GenericMeta(TypingMeta, abc.ABCMeta):
                         continue
                 if not issubclass(new, old):
                     raise TypeError(
-                        "Cannot substitute %s for %s in %s" %
-                        (_type_repr(new), _type_repr(old), self))
+                        "Cannot substitute {0!s} for {1!s} in {2!s}".format(_type_repr(new), _type_repr(old), self))
 
         return self.__class__(self.__name__, self.__bases__,
                               dict(self.__dict__),

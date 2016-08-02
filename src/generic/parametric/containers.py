@@ -33,7 +33,7 @@ class List(Parametric, list):
         if all(isinstance(x, T) for x in data):
             super().__init__(data)
         else:
-            raise TypeError('contain non-%s elements' % T.__name__)
+            raise TypeError('contain non-{0!s} elements'.format(T.__name__))
 
     def __setitem__(self, item, value):
         T = self.dtype
@@ -60,7 +60,7 @@ class List(Parametric, list):
 
     def __raise_value_insertion_error(self, value):
         fmt = type(value).__name__, type(self).__name__
-        raise TypeError('cannot insert %s values on %s' % fmt)
+        raise TypeError('cannot insert {0!s} values on {1!s}'.format(*fmt))
 
 
 class Dict(Parametric, dict):

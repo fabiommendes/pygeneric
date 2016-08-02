@@ -69,8 +69,8 @@ class GenericMeta(GenericMeta):
                 if isinstance(base, TypingMeta):
                     if not isinstance(base, typing.GenericMeta):
                         raise TypeError(
-                            "You cannot inherit from magic class %s" %
-                            repr(base))
+                            "You cannot inherit from magic class {0!s}".format(
+                            repr(base)))
                     if base.__parameters__ is None:
                         continue  # The base is unparameterized.
                     for bp in base.__parameters__:
@@ -110,8 +110,7 @@ class GenericMeta(GenericMeta):
                     "All type variables in Generic[...] must be distinct.")
         else:
             if len(params) != len(self.__parameters__):
-                raise TypeError("Cannot change parameter count from %d to %d" %
-                                (len(self.__parameters__), len(params)))
+                raise TypeError("Cannot change parameter count from {0:d} to {1:d}".format(len(self.__parameters__), len(params)))
             for new, old in zip(params, self.__parameters__):
                 if isinstance(old, TypeVar):
                     if not old.__constraints__:
@@ -122,8 +121,7 @@ class GenericMeta(GenericMeta):
                         continue
                 if not issubclass(new, old):
                     raise TypeError(
-                        "Cannot substitute %s for %s in %s" %
-                        (_type_repr(new), _type_repr(old), self))
+                        "Cannot substitute {0!s} for {1!s} in {2!s}".format(_type_repr(new), _type_repr(old), self))
 
         return self.__class__(self.__name__, self.__bases__,
                               dict(self.__dict__),
