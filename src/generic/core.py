@@ -607,7 +607,7 @@ def _simple_factory(func, argtypes, restype):
 
 
 def _restype_checker_factory(func, argtypes, restype):
-    """Simply check if the return type is correct"""
+    """Check if the return type is correct"""
 
     if restype is None:
         return func

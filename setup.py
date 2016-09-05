@@ -1,15 +1,7 @@
 # -*- coding: utf8 -*-
-#
-# This is my "best-practices" project structure that I copy and past to other
-# projects. Fell free to imitate. It is mostly based on advice from
-#
-#   https://www.jeffknupp.com/blog/2013/08/16/open-sourcing-a-python-project
-# -the-right-way/
-#
-# but with a few twists.
-#
 import os
 import sys
+
 import setuptools
 from setuptools import setup
 
@@ -20,9 +12,7 @@ SRC = os.path.join(BASE, 'src')
 setup_kwds = dict(cmdclass={})
 
 
-#
 # Update VERSION and meta.py with meta information
-#
 with open(os.path.join(BASE, 'VERSION')) as F:
     VERSION = F.read().strip()
 
@@ -33,44 +23,20 @@ with open(os.path.join(SRC, 'generic', 'meta.py'), 'w') as F:
         '__author__ = %r\n' % AUTHOR)
 
 
-#
 # Choose the default Python3 branch or the code converted by 3to2
-#
 PYSRC = 'src' if sys.version_info[0] == 3 else 'py2src'
 
-#
-# Test integration
-#
-from setuptools.command.test import test as TestCommand
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
 
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = []
-
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        #import here, cause outside the eggs aren't loaded
-        import pytest
-        errno = pytest.main(self.pytest_args)
-        sys.exit(errno)
-setup_kwds['cmdclass']['test'] = PyTest
-
-#
 # Cython stuff
-#
 if 'PyPy' not in sys.version:
     try:
         from Cython.Build import cythonize
         from Cython.Distutils import build_ext
     except ImportError:
         import warnings
-        warnings.warn('Please install Cython to compile faster versions of FGAme modules')
+
+        warnings.warn(
+            'Please install Cython to compile faster versions of FGAme modules')
     else:
         try:
             setup_kwds.update(ext_modules=cythonize('src/generic/*.pyx'))
@@ -78,9 +44,13 @@ if 'PyPy' not in sys.version:
         except ValueError:
             pass
 
-#
+# Bellow Python 3.5, we have a dependency on the typing module
+if sys.version < (3, 5):
+    typing_dep = ['typing']
+else:
+    typing_dep = []
+
 # Main configuration script
-#
 setup(
     name='pygeneric',
     version=VERSION,
@@ -120,7 +90,7 @@ in Python 2.
     package_dir={'': PYSRC},
     packages=setuptools.find_packages(PYSRC),
     license='GPL',
-    install_requires=['six'],
+    install_requires=['six'] + typing_dep,
     zip_safe=False,
     tests_require=['pytest', 'psutil', 'manuel'],
     setup_requires=[],

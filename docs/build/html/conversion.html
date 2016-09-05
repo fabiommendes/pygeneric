@@ -1,0 +1,342 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Conversions and Promotions &mdash; pygeneric 0.5.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.5.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pygeneric 0.5.1 documentation" href="index.html" />
+    <link rel="prev" title="Generic functions and multiple dispatch" href="generic.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="conversions-and-promotions">
+<h1>Conversions and Promotions<a class="headerlink" href="#conversions-and-promotions" title="Permalink to this headline">¶</a></h1>
+<p>This module introduces a system for converting objects to different types
+and for promoting arguments of mathematical operations to a common type that is
+similar to the same concepts found in the Julia language.</p>
+<div class="section" id="conversions">
+<h2>Conversions<a class="headerlink" href="#conversions" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="xref py py-func docutils literal"><span class="pre">convert()</span></code> function implements a generic interface for converting
+objects between different types. The convert function is called as
+<code class="docutils literal"><span class="pre">convert(obj,</span> <span class="pre">type)</span></code> and attempts to convert <code class="docutils literal"><span class="pre">obj</span></code> to the given type
+<code class="docutils literal"><span class="pre">type</span></code>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">generic</span> <span class="kn">import</span> <span class="n">convert</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">convert</span><span class="p">(</span><span class="mi">42</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+<span class="go">42.0</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convert</span><span class="p">(</span><span class="mi">42</span><span class="p">,</span> <span class="nb">complex</span><span class="p">)</span>
+<span class="go">(42+0j)</span>
+</pre></div>
+</div>
+<p>The conversion is not guaranteed to succeed. The user may give an argument and
+a type for which there are no known conversions. Even when there is a known
+conversion for some specific type, it may fail for specific values.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convert</span><span class="p">(</span><span class="s">&#39;42&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">TypeError</span>: <span class="n">cannot convert &#39;str&#39; to &#39;float&#39;</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convert</span><span class="p">(</span><span class="mf">1.5</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>                   
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">InexactError</span>: <span class="n">1.5</span>
+</pre></div>
+</div>
+<p>It is possible to define custom conversions using the <code class="xref py py-func docutils literal"><span class="pre">set_conversion()</span></code>
+decorator. This function is designed to be used with user defined types and one
+cannot override existing conversions.</p>
+<p>Similarly, <code class="xref py py-func docutils literal"><span class="pre">get_conversion(T1,</span> <span class="pre">T2)()</span></code> returns the conversion function
+registered for the two types (or raises a TypeError, if the conversion
+does not exist).</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">generic</span> <span class="kn">import</span> <span class="n">set_conversion</span>
+
+<span class="k">class</span> <span class="nc">MyNum</span><span class="p">(</span><span class="nb">int</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="nd">@set_conversion</span><span class="p">(</span><span class="n">MyNum</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">conversion</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>Now we can call</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convert</span><span class="p">(</span><span class="n">MyNum</span><span class="p">(</span><span class="mi">41</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+<span class="go">42</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="promotion">
+<h2>Promotion<a class="headerlink" href="#promotion" title="Permalink to this headline">¶</a></h2>
+<p>Many mathematical functions of two or more arguments implicitly expect the
+arguments to be  of the same type. When one asks for something such as <code class="docutils literal"><span class="pre">41</span> <span class="pre">+</span>
+<span class="pre">1.0</span></code>, the first argument is converted to float before doing the actual
+summation in the CPU. In most cases, Python makes these conversions
+automatically. However, when dealing with multiple dispatch functions, one often
+has to be more explicit.</p>
+<p>The promotion mechanism provides a way automate most of these conversions by
+trying to find a suitable common type for a tuple of mixed types. Take the
+add(x, y) function, for instance. It has a fallback implementation similar to
+the one bellow:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">add_fallback</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">add</span><span class="p">(</span><span class="o">*</span><span class="n">promote</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This tries to convert x and y to a common type that should support additions.
+The real implementation is slightly more complicated since it has to prevent
+an infinite recursion when the fallback does not exist.</p>
+<p>The rationale behind type promotions is that two numeric types should always
+try to promote to a common type that is able to represent most values from both
+types. This may happen only &#8220;optimistically/approximately&#8221; such as in
+the case of int to float conversions or promotions of integer types with
+different bit widths.</p>
+<dl class="docutils">
+<dt>We try to follow these rules:</dt>
+<dd><ol class="first last arabic simple">
+<li>Numerical types which differ only by bitwidth should be converted to
+highest bitwidth. (This is not an issue with Python&#8217;s builtin numerical
+types, since int&#8217;s have arbitrary precision).</li>
+<li>Signed integers with unsigned integers should be converted to signed
+integers and use the highest bitwidth. Some unsigned values can result in
+failed promotions.</li>
+<li>Floats and integers are always promoted to floats.</li>
+<li>Reals and complexes are always promoted to complexes.</li>
+</ol>
+</dd>
+</dl>
+<div class="section" id="defining-custom-promotions">
+<h3>Defining custom promotions<a class="headerlink" href="#defining-custom-promotions" title="Permalink to this headline">¶</a></h3>
+<p>Promotion rules for basic Python types are already defined. The user can define
+promotions for its custom types using the <code class="xref py py-func docutils literal"><span class="pre">set_promotion_rule()</span></code> and
+<code class="xref py py-func docutils literal"><span class="pre">set_promotion()</span></code> functions. The first is the most convenient for defining
+simple promotions in which arguments of types T1 and T2 are simply converted
+to type T3. A simple example is</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">set_promotion_rule</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>                       
+</pre></div>
+</div>
+<p>Notice that the reciprocal (int, float) &#8211;&gt; float is automatically defined.</p>
+<p>The <code class="xref py py-func docutils literal"><span class="pre">set_promotion()</span></code> may be required for more complicated promotions which
+involves operations other than simple conversions. The previous rule could be
+re-written as</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nd">@set_promotion</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">restype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>                   
+<span class="gp">... </span><span class="k">def</span> <span class="nf">promote_float_int</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="c"># do something complicated</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here we can assume that the argument types will appear in the given order and
+the promotion mechanism automatically creates the function with swapped
+arguments.</p>
+</div>
+</div>
+<div class="section" id="module-generic.conversion">
+<span id="api-documentation"></span><h2>API Documentation<a class="headerlink" href="#module-generic.conversion" title="Permalink to this headline">¶</a></h2>
+<p>Conversion and promotion between types.</p>
+<dl class="function">
+<dt id="generic.conversion.convert">
+<code class="descname">convert</code><span class="sig-paren">(</span><em>value</em>, <em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generic/conversion.html#convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#generic.conversion.convert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert value to the given type.</p>
+<p>It raises a TypeError if no conversion is possible and a ValueError if
+conversion is possible in general, but not for the specific value given.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">convert</span><span class="p">(</span><span class="mi">42</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+<span class="go">42.0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">convert</span><span class="p">(</span><span class="s">&#39;42&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="c">...</span>
+<span class="gr">TypeError</span>: <span class="n">cannot convert &#39;str&#39; to &#39;float&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="generic.conversion.get_conversion">
+<code class="descname">get_conversion</code><span class="sig-paren">(</span><em>from_type</em>, <em>to_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generic/conversion.html#get_conversion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#generic.conversion.get_conversion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a function that converts from input type to the given output
+type</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="generic.conversion.set_conversion">
+<code class="descname">set_conversion</code><span class="sig-paren">(</span><em>from_type</em>, <em>to_type</em>, <em>function=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generic/conversion.html#set_conversion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#generic.conversion.set_conversion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a function that converts between the two given types.</p>
+<p>Can be used as a decorator as in:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@set_conversion</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">int_to_float</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="generic.conversion.promote">
+<code class="descname">promote</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generic/conversion.html#promote"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#generic.conversion.promote" title="Permalink to this definition">¶</a></dt>
+<dd><p>Promote x and y to a common type.</p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">promote</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">3.14</span><span class="p">)</span>
+<span class="go">(1.0, 3.14)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">promote</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">)</span>
+<span class="go">(1.0, 2.0, 3.0)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="generic.conversion.get_promotion">
+<code class="descname">get_promotion</code><span class="sig-paren">(</span><em>T1</em>, <em>T2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generic/conversion.html#get_promotion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#generic.conversion.get_promotion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a function f(x, y) that returns a tuple (X, Y) with the promoted
+versions of x and y. Both outputs X and Y have the same value.</p>
+<p>Raises a TypeError if no promotion function is found</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="generic.conversion.set_promotion">
+<code class="descname">set_promotion</code><span class="sig-paren">(</span><em>T1</em>, <em>T2</em>, <em>*</em>, <em>function=None</em>, <em>symmetric=True</em>, <em>restype=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generic/conversion.html#set_promotion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#generic.conversion.set_promotion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define the promotion rule for the pair of types (T1, T2).</p>
+<p>It is usually more convenient to use the set_promotion_rule() function.
+Otherwise the user must take care of the order of arguments and manual
+conversions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>T1,T2: type</strong></p>
+<blockquote>
+<div><p>The two input types the promotion function relates to</p>
+</div></blockquote>
+<p><strong>function</strong> : callable</p>
+<blockquote>
+<div><p>A function f(x, y) &#8211;&gt; (X, Y) that performs the promotion.</p>
+</div></blockquote>
+<p><strong>symmetric</strong> : bool</p>
+<blockquote>
+<div><p>If True (default), the promotion is considered to be symmetric: i.e.,
+promotion for (T2, T1) is given calling f(y, x)</p>
+</div></blockquote>
+<p><strong>restype</strong> : type</p>
+<blockquote class="last">
+<div><p>Optional type of the promotion. It is considered to be a bad practice
+to define a promotion that may return a different type depending on the
+argument values. This optional parameters tells the expected output
+type for the given promotion. This information may be useful by other
+functions in order to make stronger assumptions about promotions.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="generic.conversion.set_promotion_rule">
+<code class="descname">set_promotion_rule</code><span class="sig-paren">(</span><em>T1</em>, <em>T2</em>, <em>T3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generic/conversion.html#set_promotion_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#generic.conversion.set_promotion_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the simple promotion rule for when the promotion from type T1 with
+type T2 is a simple convertion to type T3.</p>
+<p>Usually T3 is one of T1 or T2, but this is not necessary. The user does
+not have to specify the symmetric promotion (T2, T1) to T3.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="generic.conversion.promote_type">
+<code class="descname">promote_type</code><span class="sig-paren">(</span><em>T1</em>, <em>T2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/generic/conversion.html#promote_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#generic.conversion.promote_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the output type for the promotion rule with types T1 and T2</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Conversions and Promotions</a><ul>
+<li><a class="reference internal" href="#conversions">Conversions</a></li>
+<li><a class="reference internal" href="#promotion">Promotion</a><ul>
+<li><a class="reference internal" href="#defining-custom-promotions">Defining custom promotions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-generic.conversion">API Documentation</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="generic.html" title="previous chapter">Generic functions and multiple dispatch</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/conversion.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Fábio Macêdo Mendes.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/conversion.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -23,7 +23,7 @@ Documentation
 -------------
 
 You can always improve documentation! Even small patches such as correcting
-English mistakes are valuable. The documentation is written in
+English mistakes and adding examples are valuable. The documentation is written in
 `reSTructuredText`__ using `Sphinx`__, and is scattered among a few *.rst*
 files and doc-strings in Python source.
 
@@ -35,7 +35,10 @@ classes. Most modules and higher level documentation should reside in the *.rst*
 files under the project's */doc/source/* folder.
 
 Docstrings uses `numpydoc`__ format (which requires an extra sphinx plugin). If
-you are lazy to read all the manual, try to follow the template bellow::
+you are lazy to read all the manual, try to follow the template bellow:
+
+.. ignore-next-block
+.. code-block::python
 
     def add(x, y):
         """

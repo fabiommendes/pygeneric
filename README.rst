@@ -24,8 +24,8 @@ more difficult to keep Python 2 support as we implement more advanced features.
 Not all functionality works in Python 2, and sometimes extra precautions
 are necessary. Pygeneric cannot handle old style classes and sometimes we are
 limited by lack of some Python 3 only syntax. Python 2 also have some quirks
-that we do not try to emulate (e.g., broken comparison operators), keeping an
-uniform Python 3 semantics.
+that we do not try to emulate (e.g., broken comparison operators), so pygeneric
+uses an uniform Python 3 semantics.
 
 
 Basic usage

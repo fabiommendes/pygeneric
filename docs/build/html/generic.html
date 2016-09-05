@@ -1,0 +1,272 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Generic functions and multiple dispatch &mdash; pygeneric 0.5.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.5.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pygeneric 0.5.1 documentation" href="index.html" />
+    <link rel="next" title="Conversions and Promotions" href="conversion.html" />
+    <link rel="prev" title="Installation" href="install.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="generic-functions-and-multiple-dispatch">
+<h1>Generic functions and multiple dispatch<a class="headerlink" href="#generic-functions-and-multiple-dispatch" title="Permalink to this headline">¶</a></h1>
+<p>The basic functionality implemented by <code class="docutils literal"><span class="pre">pygeneric</span></code> is a generic function with
+multiple dispatch. We usually construct these functions using the <code class="docutils literal"><span class="pre">&#64;generic</span></code>
+decorator, but they can also be build by an explicit instantiation of the
+<code class="xref py py-class docutils literal"><span class="pre">Generic</span></code> class.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">generic</span> <span class="kn">import</span> <span class="n">generic</span>
+
+<span class="nd">@generic</span>
+<span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;Got </span><span class="si">%r</span><span class="s"> and </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+</pre></div>
+</div>
+<p><code class="docutils literal"><span class="pre">func</span></code> is now a <code class="xref py py-class docutils literal"><span class="pre">Generic</span></code> instance. Overloading is done by using one
+of the <code class="docutils literal"><span class="pre">&#64;func.overload</span></code> or <code class="docutils literal"><span class="pre">&#64;func.register</span></code>
+decorators:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="kn">import</span> <span class="n">Number</span>
+
+<span class="nd">@func.overload</span>
+<span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Number</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">Number</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;Got two numbers: </span><span class="si">%r</span><span class="s"> and </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+
+<span class="nd">@func.register</span><span class="p">(</span><span class="n">Sequence</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;Got two sequences: </span><span class="si">%r</span><span class="s"> and </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>These define the type dispatch rules for the function: two numbers are
+handled by the first function, two sequences execute the second and anything
+else is redirected to the placeholder implementation used to create the generic
+function.</p>
+<div class="section" id="generic-instances-as-mappings">
+<h2>Generic instances as mappings<a class="headerlink" href="#generic-instances-as-mappings" title="Permalink to this headline">¶</a></h2>
+<p>In some sense, we can think of generic functions as a mapping between
+types to implementations. Indeed, <code class="xref py py-class docutils literal"><span class="pre">Generic</span></code> instances have a mapping
+interface that do exactly that:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">number_func</span> <span class="o">=</span> <span class="n">func</span><span class="p">[</span><span class="n">Number</span><span class="p">,</span> <span class="n">Number</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">number_func</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="go">Got two numbers: 1 and 2</span>
+</pre></div>
+</div>
+<p>It has all methods one would expect from a dictionary. The main difference,
+perhaps, is that it create default values for tuples of arguments that were
+not explicitly defined using the dispatch algorithm:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">placeholder_func</span> <span class="o">=</span> <span class="n">func</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">placeholder_func</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="go">Got 1 and 2</span>
+</pre></div>
+</div>
+<p>One can access keys, iterate, and do most operations that are possible with a
+regular dictionary. This includes setting items as a (not encouraged)
+alternative to overloading:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">func_str</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;Got two strings: </span><span class="si">%r</span><span class="s"> and </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+<span class="n">func</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">func_str</span>
+</pre></div>
+</div>
+<p>An useful idiom is to use indexing to call a generic implementation from a more
+specialized one:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@func.overload</span>
+<span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span><span class="nb">float</span><span class="p">):</span>
+    <span class="n">func</span><span class="p">[</span><span class="n">Number</span><span class="p">,</span> <span class="n">Number</span><span class="p">](</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;But beware floats are not associative&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It can also be used to inspect the generic function for the number and types
+of methods implemented.</p>
+</div>
+<div class="section" id="factory-functions">
+<h2>Factory functions<a class="headerlink" href="#factory-functions" title="Permalink to this headline">¶</a></h2>
+<p>Generic functions can create methods on-the-fly using factory functions:
+instead of providing an implementation for a specific set of argument types,
+a factory method is a function that return other functions when called.</p>
+<p>This is acomplished using the <code class="docutils literal"><span class="pre">factory=True</span></code> attribute of the
+<code class="docutils literal"><span class="pre">&#64;func.register</span></code> decorator:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Mapping</span>
+
+<span class="nd">@func.register</span><span class="p">(</span><span class="n">Mapping</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">factory</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">factory</span><span class="p">(</span><span class="n">T1</span><span class="p">,</span> <span class="n">T2</span><span class="p">):</span>
+    <span class="c"># This function will return the implementation for types T1 and T2.</span>
+    <span class="c"># If it return NotImplemented, the next method in the dispatch priority</span>
+    <span class="c"># list will be chosen.</span>
+    <span class="k">if</span> <span class="n">T1</span> <span class="ow">is</span> <span class="n">T2</span> <span class="ow">and</span> <span class="n">T1</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">elif</span> <span class="n">T1</span> <span class="ow">is</span> <span class="n">T2</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">implementation1</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&#39;Got two mappings of the same type&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">implementation1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">implementation2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&#39;Got two mappings of different types&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">implementation2</span>
+</pre></div>
+</div>
+<p>The factory above produces 3 different functions depending on the types of input
+arguments. If both objects are instances of <code class="docutils literal"><span class="pre">dict</span></code>, it returns
+<code class="docutils literal"><span class="pre">NotImplementedError</span></code>, which tells the dispatcher to pick the next
+implementation in the dispatch list. If both types are equal (but different from
+dict) it dispatches to <code class="xref py py-func docutils literal"><span class="pre">implementation1()</span></code>, otherwise, <code class="xref py py-func docutils literal"><span class="pre">implementation2()</span></code>
+is chosen. These implementations are kept in cache, but are not inserted in the
+Generic function dictionary. Thus one can later specialize to any subtype (e.g.,
+func(dict, dict)) without conflicts.</p>
+<p>Factory functions are useful to emulate what in other languages can be
+accomplished with parametrization on function definitions. In Julia, for
+instance, it is possible to define complex dispatch such as:</p>
+<div class="highlight-julia"><div class="highlight"><pre><span class="k">function</span><span class="nf"> func</span><span class="p">{</span><span class="n">T</span><span class="o">&lt;:</span><span class="n">Number</span><span class="p">}(</span><span class="n">L</span><span class="p">::</span><span class="n">Array</span><span class="p">{</span><span class="n">T</span><span class="p">},</span> <span class="n">x</span><span class="p">::</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">println</span><span class="p">(</span><span class="s">&quot;Got a sequence of numbers and an extra element&quot;</span><span class="p">)</span>
+<span class="k">end</span>
+</pre></div>
+</div>
+<p>This rule is only used if L is an array of numbers of type T and
+x is of the same type. If <code class="docutils literal"><span class="pre">L</span> <span class="pre">=</span> <span class="pre">[1,</span> <span class="pre">2,</span> <span class="pre">3]</span></code> and <code class="docutils literal"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">1.0</span></code>, the method will not
+be used. This kind of behavior is very difficult to support using Python&#8217;s
+comparatively limited type system. Factory functions can implement a similar
+functionality albeit not as elegantly:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">generic.parametric</span> <span class="kn">import</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="nd">@func.register</span><span class="p">(</span><span class="n">List</span><span class="p">,</span> <span class="n">Number</span><span class="p">,</span> <span class="n">factory</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">factory</span><span class="p">(</span><span class="n">TL</span><span class="p">,</span> <span class="n">Tx</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">parameters</span><span class="p">(</span><span class="n">TL</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">Tx</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">matched</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&#39;Got a sequence of numbers and an extra element&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span>
+</pre></div>
+</div>
+<p>In the above example, we are using the List type defined in <code class="docutils literal"><span class="pre">generic.parametric</span></code>.
+It consists in a parametric type representing a list of objects with uniform
+type.</p>
+</div>
+<div class="section" id="corner-cases-and-gotchas">
+<h2>Corner cases and gotchas<a class="headerlink" href="#corner-cases-and-gotchas" title="Permalink to this headline">¶</a></h2>
+<p>The introduction of Abstract Base Classes in PEP3119, and more specifically the
+possibility of overloading <code class="xref py py-func docutils literal"><span class="pre">isinstance()</span></code> and <code class="xref py py-func docutils literal"><span class="pre">issubclass()</span></code> made
+Python&#8217;s type system very flexible at the cost of some predictability. It is
+possible, for instance, to define classes that
+<code class="docutils literal"><span class="pre">isinstance(x,</span> <span class="pre">C)</span> <span class="pre">!=</span> <span class="pre">issubclass(type(x),</span> <span class="pre">C)</span></code>.</p>
+<p>Pygeneric always tests subclassing using <code class="xref py py-func docutils literal"><span class="pre">issubclass()</span></code>, and never uses
+<code class="xref py py-func docutils literal"><span class="pre">isinstance()</span></code>. Although one can expect that both functions will almost
+always yield the same results, there is no guarantee. To cite the PEP:</p>
+<p>Take a &#8220;Prime&#8221; class for instance. We can define it so <code class="docutils literal"><span class="pre">isinstance(7,</span> <span class="pre">Prime)</span> <span class="pre">==</span> <span class="pre">True</span></code>.
+However, we don&#8217;t know what to make of <code class="docutils literal"><span class="pre">issubclass(int,</span> <span class="pre">Prime)</span></code>: some integers
+are primes, and some are not. Pygeneric cannot understand this.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@func.overload</span>
+<span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Prime</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">Prime</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;Got two primes!&#39;</span><span class="p">)</span>
+
+<span class="n">func</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>  <span class="c"># we don&#39;t know what to do!</span>
+</pre></div>
+</div>
+<p>If we interpret the <code class="docutils literal"><span class="pre">issubclass(A,</span> <span class="pre">B)</span></code> relation as true iff all instances of
+A are instances of B, then it is safe to say that <code class="docutils literal"><span class="pre">issubclass(int,</span> <span class="pre">Prime)</span> <span class="pre">==</span> <span class="pre">False</span></code>.
+In this case, func(2, 3) would dispatch to func(int, int) -&gt; func(Number, Number),
+even though the two arguments are primes. If Prime is also a concrete subclass
+of int that only accept prime values, we would obtain the expected behavior
+by calling func(Prime(2), Prime(3)).</p>
+<p>Although this examples with primes might be a little artificial, the exact same
+situation might appear when using the parametric container types from
+<code class="docutils literal"><span class="pre">generic.parametric</span></code>.</p>
+</div>
+<div class="section" id="api-documentation">
+<h2>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Generic functions and multiple dispatch</a><ul>
+<li><a class="reference internal" href="#generic-instances-as-mappings">Generic instances as mappings</a></li>
+<li><a class="reference internal" href="#factory-functions">Factory functions</a></li>
+<li><a class="reference internal" href="#corner-cases-and-gotchas">Corner cases and gotchas</a></li>
+<li><a class="reference internal" href="#api-documentation">API Documentation</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="install.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="conversion.html" title="next chapter">Conversions and Promotions</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/generic.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Fábio Macêdo Mendes.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/generic.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

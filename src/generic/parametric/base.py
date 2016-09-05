@@ -16,16 +16,13 @@ __all__ = [
     'sameorigin', 'parameters',
 ]
 
+
 # Import symbols with default implementations
-# (this has to be done like this because 3to2 do not understand class definitions
-# inside try/except blocks.
-ABCMeta = abc.ABCMeta
-class ABC(metaclass=ABCMeta):
-    pass
-try:
-    ABC = abc.ABC
-except AttributeError:
-    pass
+# (this has to be done like this because 3to2 do not understand class
+# definitions inside try/except blocks.
+class ABC(metaclass=abc.ABCMeta):
+    __slots__ = ()
+
 
 try:
     from typing import Any

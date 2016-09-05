@@ -2,10 +2,8 @@ import pytest
 import six
 from generic import generic
 
-#
-# Fixtures
-#
-@pytest.    fixture
+
+@pytest.fixture
 def addfunc():
     @generic
     def addfunc(x, y):
@@ -161,9 +159,3 @@ def test_memory_leaks(addfunc):
     mem1 = process.memory_info()
     delta = mem1.rss - mem0.rss
     assert delta == 0
-            
-    
-    
-if __name__ == '__main__':
-    #pytest.main('test_core.py -q --tb=native')
-    pytest.main('test_core.py -q --capture=no --tb=native')

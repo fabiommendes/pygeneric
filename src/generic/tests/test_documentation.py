@@ -27,7 +27,7 @@ def add_manuel_suite():
     mod_path = os.path.dirname(test_path)
     src_path = os.path.dirname(mod_path)
     proj_path = os.path.dirname(src_path)
-    doc_path = os.path.join(proj_path, 'doc', 'source')
+    doc_path = os.path.join(proj_path, 'docs', 'source')
     files = sorted(os.path.join(doc_path, f) for f in os.listdir(doc_path))
     files = (f for f in files if f.endswith('.rst') or f.endswith('.txt'))
 

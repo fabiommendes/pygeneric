@@ -181,13 +181,14 @@ def _opsame_meta_factory(opname):
 #
 def _arithmetic_op_factory(opname):
     """Creates a generic arithmetic operator with the given name"""
-    
+
     method = '__%s__' % opname
     rmethod = '__r%s__' % opname
-    
+    not_implemented = lambda y: NotImplemented
+
     @generic
     def op(x, y):
-        out = getattr(x, method, lambda y: NotImplemented)(y)
+        out = getattr(x, method, not_implemented)(y)
         if out is NotImplemented:
             try:
                 return getattr(y, rmethod)(x)
@@ -206,13 +207,13 @@ def _arithmetic_op_factory(opname):
 
     @op.register(object, Object)
     def op_second(x, y):
-        out = getattr(x, method, lambda y: NotImplemented)(y)
+        out = getattr(x, method, not_implemented)(y)
         if out is NotImplemented:
             raise_no_methods(op, args=(x, y))
         return out
 
     op.register(Object, Object, func=_opsame_meta_factory(opname), factory=True)
-    op.__name__ = opname 
+    op.__name__ = opname
     return op
 
 add = _arithmetic_op_factory('add')
@@ -223,8 +224,8 @@ floordiv = _arithmetic_op_factory('floordiv')
 mod = _arithmetic_op_factory('mod')
 matmul = _arithmetic_op_factory('matmul')
 pow = _arithmetic_op_factory('pow')
-and_ = _arithmetic_op_factory('and_')
-or_ = _arithmetic_op_factory('or_')
+and_ = _arithmetic_op_factory('and')
+or_ = _arithmetic_op_factory('or')
 rshift = _arithmetic_op_factory('rshift')
 lshift = _arithmetic_op_factory('lshift')
 
@@ -261,7 +262,7 @@ def _relational_op_factory(opname, ropname):
     def op_second(x, y):
         out = getattr(x, method, lambda y: NotImplemented)(y)
         if out is NotImplemented:
-            raise_unordered(op, args=(x, y))
+            raise_unordered(x, y)
         return out
 
     op.register(Object, Object, func=_opsame_meta_factory(opname), factory=True)
@@ -374,6 +375,7 @@ def ne(x, y):
 @ne.register(object, Object)
 def ne(x, y):
     return not (x == y)
+
 
 #
 # Total ordering relations
