@@ -7,10 +7,11 @@ python:
     - "nightly"
 
 # install dependencies
+# we have to upgrade pip to accept the .[dev] option
 install:
+    - pip install pip -U
     - pip install .[dev] -r requirements.txt
-    - pip install pytest pytest-cov
-    - pip install coveralls
+    - pip install coveralls pytest-cov
 
 # run tests
 script:
