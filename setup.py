@@ -92,7 +92,7 @@ in Python 2.
     license='GPL',
     install_requires=['six'] + typing_dep,
     zip_safe=False,
-    extra_requires={
+    extras_require={
         'dev': ['pytest', 'psutil', 'manuel'],
     },
     **setup_kwds
