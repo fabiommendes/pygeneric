@@ -14,14 +14,13 @@ py2src/generic/tree.py
 py2src/generic/util.py
 py2src/generic/parametric/__init__.py
 py2src/generic/parametric/base.py
+py2src/generic/parametric/containers.py
 py2src/generic/parametric/pytyping.py
 py2src/generic/parametric/typeparams.py
-py2src/generic/tests/__init__.py
-py2src/generic/tests/__main__.py
-py2src/generic/tests/simplebench.py
 py2src/generic/tests/test_conversions.py
 py2src/generic/tests/test_core.py
 py2src/generic/tests/test_dispatch.py
+py2src/generic/tests/test_documentation.py
 py2src/generic/tests/test_operator.py
 py2src/generic/tests/test_parametric.py
 src/generic/__init__.py
@@ -39,9 +38,6 @@ src/generic/parametric/base.py
 src/generic/parametric/containers.py
 src/generic/parametric/pytyping.py
 src/generic/parametric/typeparams.py
-src/generic/tests/__init__.py
-src/generic/tests/__main__.py
-src/generic/tests/simplebench.py
 src/generic/tests/test_conversions.py
 src/generic/tests/test_core.py
 src/generic/tests/test_dispatch.py

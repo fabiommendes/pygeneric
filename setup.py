@@ -45,7 +45,7 @@ if 'PyPy' not in sys.version:
             pass
 
 # Bellow Python 3.5, we have a dependency on the typing module
-if sys.version < (3, 5):
+if sys.version_info < (3, 5):
     typing_dep = ['typing']
 else:
     typing_dep = []
@@ -92,7 +92,8 @@ in Python 2.
     license='GPL',
     install_requires=['six'] + typing_dep,
     zip_safe=False,
-    tests_require=['pytest', 'psutil', 'manuel'],
-    setup_requires=[],
+    extra_requires={
+        'dev': ['pytest', 'psutil', 'manuel'],
+    },
     **setup_kwds
 )

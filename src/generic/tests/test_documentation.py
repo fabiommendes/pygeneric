@@ -7,7 +7,9 @@ import os
 
 
 def _factory(func, name):
-    """Create a new pytest test function"""
+    """
+    Create a new pytest test function.
+    """
 
     # Wrap function so pytest do not expect an spurious "self" fixture.
     def wrapped():
@@ -46,7 +48,3 @@ def add_manuel_suite():
 
 
 add_manuel_suite()
-
-
-if __name__ == '__main__':
-    pytest.main('test_documentation.py')
