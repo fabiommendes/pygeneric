@@ -1,17 +1,23 @@
-/docs/source/contributing.rst
-/build/
-/dist/
-/py2src/
-/.idea/
-/.eggs/
-/.settings/
-/.benchmarks/
-/doc/build/
-/resources/
-**/__pycache__/
-**/htmlcov/
-html.zip
-.project
-.pydevproject
-*.so
+# Cached builds
+__pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.so
+*.dll
+*.egg
+*.egg-info/
+
+# Build directories
+docs/_build/
+build/
+dist/
+
+# Python-boilerplate auto generated files
+src/generic/__meta__.py
+
+# IDEs
+.idea/
+
+# Testing and temporary files
+.tox/

@@ -192,3 +192,4 @@ def test_generic_relations_work_for_non_generic_types():
     assert le(1, 1) and lt(1, 2)
     assert ge(1, 1) and gt(2, 1)
     assert ne(1, 2) and not eq(2, 1)
+

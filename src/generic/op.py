@@ -3,8 +3,8 @@ Base types for objects that delegate implementations of operations and
 relations to generic functions.
 """
 import abc
-from . import generic
-from .errors import raise_no_methods, raise_unordered
+from generic.core import generic
+from generic.errors import raise_no_methods, raise_unordered
 
 
 __all__ = [
