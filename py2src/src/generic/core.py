@@ -211,7 +211,9 @@ class Generic(_generic_base):
         func = self._cache[argtypes] = implementation
         return func
     
-    def factory(self, *argtypes, level=0):
+    def factory(self, *argtypes, **_3to2kwargs):
+        if 'level' in _3to2kwargs: level = _3to2kwargs['level']; del _3to2kwargs['level']
+        else: level = 0
         """Return the factory function by searching in the dispatch list for
         the function with the given level of priority. Does not check if the 
         function returns NotImplemented as the factory is never executed."""
@@ -429,7 +431,8 @@ def dispatch(T, options, fname='function'):
         if len(parents) == 1:
             break
         else:
-            X, *tail = parents
+            _3to2list = list(parents)
+            X, tail, = _3to2list[:1] + [_3to2list[1:]]
             parents = [S for S in tail if not subclass(X, S)]
             parents.append(X)
 
@@ -623,22 +626,18 @@ def _restype_checker_factory(func, argtypes, restype):
 
     
 def _strict_check_factory(func, argtypes, restype):
-    """
-    Check if all input/output types are *exactly* the same as declared.
+    """Check if all input/output types are *exactly* the same as declared.
     
-    Raise type errors with subclasses.
-    """
+    Raise type errors with subclasses."""
     
     return _instance_check_factory(func, argtypes, restype, 
                                    instancecheck=lambda x, y: x is y) 
 
 
 def _instance_check_factory(func, argtypes, restype, instancecheck=isinstance):
-    """
-    Check if all input/output types are the same as declared.
+    """Check if all input/output types are the same as declared.
     
-    Subclasses are also allowed.
-    """
+    Subclasses are also allowed."""
     
     N = len(argtypes)
     

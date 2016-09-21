@@ -623,22 +623,18 @@ def _restype_checker_factory(func, argtypes, restype):
 
     
 def _strict_check_factory(func, argtypes, restype):
-    """
-    Check if all input/output types are *exactly* the same as declared.
+    """Check if all input/output types are *exactly* the same as declared.
     
-    Raise type errors with subclasses.
-    """
+    Raise type errors with subclasses."""
     
     return _instance_check_factory(func, argtypes, restype, 
                                    instancecheck=lambda x, y: x is y) 
 
 
 def _instance_check_factory(func, argtypes, restype, instancecheck=isinstance):
-    """
-    Check if all input/output types are the same as declared.
+    """Check if all input/output types are the same as declared.
     
-    Subclasses are also allowed.
-    """
+    Subclasses are also allowed."""
     
     N = len(argtypes)
     

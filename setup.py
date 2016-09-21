@@ -81,6 +81,8 @@ setup(
     ] + typing_dep,
     extras_require={
         'dev': [
+            'psutil',
+            'pexpect',
             'python-boilerplate',
             'invoke>=0.13',
             'pytest',

@@ -1,6 +1,6 @@
 import argparse
-
-from generic import __version__
+import pygeneric
+from pygeneric import __version__
 
 
 def get_parser():
@@ -11,7 +11,6 @@ def get_parser():
     version = '%(prog)s ' + __version__
     parser.add_argument('--version', '-v', action='version', version=version)
     return parser
-
 
 def main(args=None):
     """

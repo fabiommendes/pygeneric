@@ -1,20 +1,23 @@
 language: python
-python:
-    - "3.3"
-    - "3.4"
-    - "3.5"
-    - "nightly"
+cache: pip
+sudo: false
 
-# install dependencies
-# we have to upgrade pip to accept the .[dev] option
+matrix:
+  include:
+   - env: TOXENV=py33
+     python: 3.3
+   - env: TOXENV=py34
+     python: 3.4
+   - env: TOXENV=py35
+     python: 3.5
+
+# Package installation
 install:
-    - pip install pip -U
-    - pip install .[dev] -r requirements.txt
-    - pip install coveralls pytest-cov
+  - pip install tox coveralls
 
-# run tests
+# Run tests
 script:
-    - py.test
+  tox
 
 after_success:
-    - coveralls
+  coveralls
