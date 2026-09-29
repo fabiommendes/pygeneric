@@ -1,11 +1,15 @@
+from numbers import Number
+
 import pytest
-from generic import generic, Number, DispatchError
+
+from generic import generic, DispatchError
 
 
-def register(generic,  *types):
+def register(generic, *types):
     def mk(out):
         def teller(*args):
             return out
+
         return teller
 
     out = types if len(types) != 1 else types[0]
@@ -14,8 +18,9 @@ def register(generic,  *types):
 
 def test_linear_single_dispatch():
     class A(int): pass
+
     class B(A): pass
-    
+
     f = generic(lambda: None)
     register(f, object)
     register(f, int)
@@ -23,16 +28,17 @@ def test_linear_single_dispatch():
 
     x = object()
     assert f(x) == object
-    assert f(0) == int 
+    assert f(0) == int
     assert f(A(0)) == A
     assert f(B(0)) == A
     assert f(0.0) == object
-            
-    
+
+
 def test_linear_multiple_dispatch():
     class A(int): pass
+
     class B(A): pass
-    
+
     f = generic(lambda: None)
     register(f, object, object)
     register(f, int, int)
@@ -41,7 +47,7 @@ def test_linear_multiple_dispatch():
 
     x = object()
     assert f(x, x) == (object, object)
-    assert f(0, 0) == (int, int) 
+    assert f(0, 0) == (int, int)
     assert f(0, A(0)) == (int, A)
     assert f(0, B(0)) == (int, A)
     assert f(A(0), 0) == (int, int)
@@ -58,13 +64,8 @@ def test_ambiguous_dispatch():
         return x + y
 
     @f.register(A, object)
-    def f(x, y):
+    def _(x, y):
         return x + y
 
     with pytest.raises(DispatchError):
         f(A(1), 1)
-
-
-if __name__ == '__main__':
-    #pytest.main('test_dispatch.py -q --tb=native')
-    pytest.main('test_dispatch.py -q')

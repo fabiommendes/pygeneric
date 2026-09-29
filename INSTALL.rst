@@ -12,9 +12,6 @@ C. The effect is not dramatic unless you are calling very simple functions in
 tight loops. The default pure-python implementation is fast enough for most
 applications.
 
-The only required dependency is the *six* package, which is very common and has
-a good change to be already installed.
-
 
 Installation commands
 =====================
@@ -32,8 +29,6 @@ execute the regular Python install::
 In Windows the command would be something like this (adapt for the correct 
 Python installation path)::
 
-    $ cd c:\python34
+    $ cd c:\python37
     $ python -m pip install pygeneric
 
-In any of these cases, it will fetch the required dependency on *six* if
-necessary.

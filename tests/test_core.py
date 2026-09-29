@@ -1,5 +1,4 @@
 import pytest
-import six
 from generic import generic
 
 
@@ -10,11 +9,11 @@ def addfunc():
         return x + y
     
     @addfunc.register(int, int)
-    def addfunc(x, y):
+    def _(x, y):
         return x + y + 1
     
     @addfunc.register(float, float)
-    def addfunc(x, y):
+    def _(x, y):
         return x + y + 1.5
     
     return addfunc
@@ -31,7 +30,7 @@ def test_overloads(addfunc):
 
 
 def test_singledispatch_interface(addfunc):
-    assert set(addfunc.registry()) == {(object, object), (int, int), (float, float)}
+    assert set(addfunc.registry()) == {None, (object, object), (int, int), (float, float)}
     assert addfunc.dispatch(float, int) == addfunc[float, int]
     assert addfunc.dispatch(int, int) == addfunc[int, int]
     
@@ -56,13 +55,9 @@ def test_register(addfunc):
     
 
 def test_register_decorator(addfunc):
-    old = addfunc
-    
     @addfunc.register(int, float)
-    def addfunc(x, y): 
+    def _(x, y):
         return x + y + 1.25
-
-    assert addfunc is old 
 
     @addfunc.register(float, int)
     def addfloatint(x, y): 
@@ -76,13 +71,9 @@ def test_register_decorator(addfunc):
 
     
 def test_overload_explicit(addfunc):
-    old = addfunc
-    
     @addfunc.overload((int, float), float)
-    def addfunc(x, y): 
+    def _(x, y):
         return x + y + 1.25
-
-    assert addfunc is old 
 
     @addfunc.overload((float, int), float)
     def addfloatint(x, y): 
@@ -95,25 +86,24 @@ def test_overload_explicit(addfunc):
     assert addfloatint(1, 2) == 4.25
 
 
-if six.PY3:
-    def test_overload_implicit(addfunc):
-        old = addfunc
-        
-        @addfunc.overload
-        def addfunc(x, y): 
-            return x + y + 1.25
-    
-        assert addfunc is old 
-    
-        @addfunc.overload
-        def addfloatint(x, y): 
-            return x + y + 1.25
-    
-        assert addfunc(1, 2) == 4
-        assert addfunc(1, 2.0) == 4.25
-        assert addfunc(2.0, 1) == 4.25
-        assert addfunc(1.0, 2.0) == 4.5
-        assert addfloatint(1, 2) == 4.25
+def test_overload_implicit(addfunc):
+    old = addfunc
+
+    @addfunc.overload
+    def addfunc(x: int, y: float) -> float:
+        return x + y + 1.25
+
+    assert addfunc is old
+
+    @addfunc.overload
+    def addfloatint(x: float, y: int) -> float:
+        return x + y + 1.25
+
+    assert addfunc(1, 2) == 4
+    assert addfunc(1, 2.0) == 4.25
+    assert addfunc(2.0, 1) == 4.25
+    assert addfunc(1.0, 2.0) == 4.5
+    assert addfloatint(1, 2) == 4.25
 
 
 def test_factory(addfunc):

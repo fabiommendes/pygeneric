@@ -43,33 +43,32 @@ in generic functions. We declare a generic function using the syntax
         print('Got %r and %r' % (x, y))
 
 
-Type dispatch can be defined in Python 3 as
+Type dispatch can be defined as
+
+.. code-block:: python
+
+    @func.register(Number, Number)
+    def _(x, y):
+        print('Got two numbers: %r and %r' % (x, y))
+
+
+or
 
 .. code-block:: python
 
     @func.overload
-    def func(x: Number, y: Number):
+    def _(x: Number, y: Number):
         print('Got two numbers: %r and %r' % (x, y))
 
 
-The Python 2-friendly syntax (which can also be useful in Python 3) is:
-
-.. code-block:: python
-
-     @func.register(Sequence, Sequence)
-     def func(x, y):
-         print('Got two sequences: %r and %r' % (x, y))
-
 
 Depending on the types of each argument, the dispatcher will choose either one
-of these three implementations
+of those two implementations
 
 >>> func(42, 0.0)
 Got two numbers: 42 and 0.0
->>> func([1, 2], (3, 4))
-Got two sequences: [1, 2] and (3, 4)
 >>> func("foo", "bar")
-Got two sequences: 'foo' and 'bar'
+Got 'foo' and 'bar'
 
 
 The type dispatch always chooses the most specialized method for the given
@@ -82,11 +81,11 @@ Consider the two specialized dispatches
     from numbers import Integral
 
     @func.overload
-    def func(x: Integral, y: Number):
+    def _(x: Integral, y: Number):
         print('Got one integer: %r and %s' % (x, y))
 
     @func.overload
-    def func(x: Integral, y: Integral):
+    def _(x: Integral, y: Integral):
        print('Got two integers: %r and %s' % (x, y))
 
 

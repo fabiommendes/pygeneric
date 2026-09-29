@@ -2,7 +2,7 @@
 Conversions and Promotions
 ==========================
 
-This module introduces a system for converting objects to different types
+This length introduces a system for converting objects to different types
 and for promoting arguments of mathematical operations to a common type that is
 similar to the same concepts found in the Julia language.
 

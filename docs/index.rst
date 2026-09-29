@@ -2,8 +2,6 @@
 Welcome to pygeneric's documentation!
 ================================================================================
 
-.. include:: warning.rst
-
 .. include:: ../README.rst
 
 .. toctree::

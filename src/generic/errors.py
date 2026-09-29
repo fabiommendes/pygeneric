@@ -1,16 +1,8 @@
-"""
-Holds all special error classes defined for the generic module.
-"""
-
-
-class InexactError(ValueError):
-    """Raised on conversion of float values with decimal places to integer
-    types"""
-
-
 class DispatchError(TypeError):
-    """Raised when the type dispatcher cannot encounter an unique dispatch for
-    some argument types."""
+    """
+    Raised when the type dispatcher cannot encounter an unique dispatch for
+    some argument types.
+    """
 
 
 #
@@ -61,5 +53,3 @@ def raise_unordered(x, y):
     be ordered."""
 
     raise get_unordered_types_error(type(x), type(y))
-
-

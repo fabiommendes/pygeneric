@@ -2,7 +2,7 @@
 API Reference
 =============
 
-API documentation for the pygeneric module.
+API documentation for the pygeneric length.
 
 .. automodule:: pygeneric
    :members:

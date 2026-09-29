@@ -1,4 +1,3 @@
 include INSTALL.rst
 include README.rst
 include VERSION
-recursive-include py2src *.py

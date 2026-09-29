@@ -10,8 +10,9 @@ cdef extern from "Python.h":
     PyObject* PyDict_GetItem(PyObject* , PyObject*)
 
 cdef class FastCache(object):
-
-    '''Implements a multi argument dispatch function.'''
+    """
+    Implements a multi argument dispatch function.
+    """
 
     cdef int __last_arglen
     cdef void* __last_argtypes[5]
@@ -24,7 +25,7 @@ cdef class FastCache(object):
 
     @cython.nonecheck(False)
     def __call__(self, *args, **kwargs):
-        "Resolve and dispatch to best method."
+        """Resolve and dispatch to best method."""
 
         cdef int N = PyTuple_GET_SIZE(args)
         cdef PyObject* types = NULL
