@@ -1,3 +1,7 @@
+.. warning::
+
+   This project is no longer maintained. For multiple dispatch in Python, see `plum <https://github.com/beartype/plum>`_. Unfinished 1.0 work is saved in the `wip-1.0` branch.
+
 ========
 Overview
 ========
